@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Least privilege. The default GITHUB_TOKEN can WRITE to the repository; this
+# job only reads it. Narrowing here means a compromised dependency running in
+# CI cannot push commits or move tags.
+permissions:
+  contents: read
+
+# Feature branches are pushed to repeatedly. Cancel superseded runs so a stack
+# of agent branches does not queue behind stale work.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      # SUPPLY CHAIN: `@v4` is a mutable tag — whoever controls it can point it
+      # at different code. Pinning to a full commit SHA is stronger:
+      #     uses: actions/checkout@<40-char-sha>  # v4.2.2
+      # Tags are used here for readability; switch to SHAs before this repo
+      # handles anything valuable, and let Dependabot bump them.
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      # `npm ci` not `npm install`: installs exactly the lockfile and fails if
+      # package.json and the lockfile disagree. `install` would silently
+      # resolve new versions, so CI would stop testing what you actually ship.
+      - run: npm ci
+
+      - run: npm run check
+
+      # NO SECRETS ARE SET FOR THIS JOB, DELIBERATELY.
+      #
+      # This is the regression test for hard rule #2: environment validation is
+      # lazy (`getEnv()` inside functions), so a build must succeed with no
+      # DATABASE_URL and no WOM_GROUP_ID. Module-scope validation would break
+      # here — which is exactly the failure this repo hit once already.
+      #
+      # If this step starts failing, something began reading env at import time.
+      # Fix the import, do not add secrets to make it pass.
+      - run: npm run build
