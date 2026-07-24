@@ -1,6 +1,7 @@
 # Wise Old Man — group endpoints
 
-**Verified:** 2026-07-24, against public group `82` (KnightSlayer, 488 members).
+**Verified:** 2026-07-24, against public group `82` (KnightSlayer, 488 members)
+and our own group `25092` (Void Reavers, 78 members).
 **Base:** `https://api.wiseoldman.net/v2`
 **Docs:** <https://docs.wiseoldman.net>
 

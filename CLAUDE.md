@@ -11,15 +11,16 @@ Updating this is part of the definition of done for any architectural change.
 ## What this is
 
 A hub of Old School RuneScape utility tools (GE/economy, combat, skilling,
-clues, quests, clan leaderboards) for one clan. One clan: assume ≤500 members,
-≤50 DAU. **Not internet-scale** — that assumption justifies most architecture
-choices.
+clues, quests, clan leaderboards) for one clan: **Void Reavers, WOM group
+`25092`, 78 members** (measured 2026-07-24, not assumed). ≤50 DAU. **Not
+internet-scale** — that assumption justifies most architecture choices. The PRD
+plans for ≤500 as headroom; the real figure is ~6× smaller.
 
 **There is no sign-in.** The app is public and read-only to everyone
 ([ADR-0012](./docs/adr/0012-no-authentication-public-read-only.md)). Clan
-identity comes from a **Wise Old Man group ID** in config; membership of that
-group is the roster. If you find yourself reaching for a session, a user, or a
-permission check — stop, and re-read ADR-0012.
+identity comes from `WOM_GROUP_ID`; membership of that group is the roster. If
+you find yourself reaching for a session, a user, or a permission check — stop,
+and re-read ADR-0012.
 
 Full requirements: [`PRD.md`](./PRD.md). Decisions: [`docs/adr/`](./docs/adr/).
 
@@ -130,17 +131,14 @@ Detail in [`docs/api-notes/`](./docs/api-notes/). Verified 2026-07-24:
   wrong; it's `high_alchemy_value` and `name`. Introspect the schema first.
 - **`infobox_monster` has 55 fields**, enough for a full DPS calculator.
 - **Wise Old Man:** 20 req/min, 100 with a free API key. MIT, actively maintained.
-- **WOM group endpoints need no auth and no key** (probed 2026-07-24, group 82):
-  - `GET /v2/groups/{id}` → **all 488 memberships in one 283 KB response**, each
-    with `role` and an embedded `player` carrying `exp`/`ehp`/`ehb`/`updatedAt`.
-    A total-XP leaderboard therefore costs **zero** extra requests.
-  - **`roleOrders`** on that payload is the clan's own rank hierarchy as
-    `{role, index}`. **Never hardcode a rank ladder** — read this.
-  - `GET /v2/groups/{id}/gained?metric=&period=` → 485 ranked rows, one call.
-  - `GET /v2/groups/{id}/competitions` → competitions with metrics and dates.
-  - Roles are real OSRS ranks (`owner`, `deputy_owner`, … `recruit`,
-    `gnome_child`), not generic ones.
-  - **Cache these server-side.** 283 KB per visitor is not acceptable.
+- **WOM group endpoints need no auth and no key.** Roster, `roleOrders`,
+  `gained` leaderboards and competitions are **one request each**, unpaginated —
+  clan views never fan out. Our group `25092` is 46 KB / 78 members and actively
+  maintained (every player refreshed within 3.3 days).
+  **Two traps:** `roleOrders` indices are **sparse** (`0,1,5,6,9,12,…`) — compare
+  them, never treat one as a position; and `gained` returns fewer rows than
+  `memberCount`, so never index one list by the other.
+  Full detail: [`wise-old-man-groups.md`](./docs/api-notes/wise-old-man-groups.md).
 - **No DPS-calculation API exists.** The official calculator is client-side. We
   implement formulas ourselves from published maths, with golden-file tests.
 
@@ -148,18 +146,18 @@ Detail in [`docs/api-notes/`](./docs/api-notes/). Verified 2026-07-24:
 
 ## Open questions
 
-Full list: PRD §9.1. **V1, V11 resolved** (ADR-0011, ADR-0010). **V11a and V4
-are moot** — there is no auth and no RSN linking to verify (ADR-0012).
+Full list: PRD §9.1. **V1, V11, V14 resolved** (ADR-0011, ADR-0010, and the
+group probe below). **V11a and V4 are moot** — there is no auth and no RSN
+linking to verify (ADR-0012).
 
-| #       | Question                                                                                       | Blocks                                                         |
-| ------- | ---------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| **V14** | **The clan's own WOM group ID — and is it kept current?** Everything clan-facing depends on it | **Every clan feature**                                         |
-| **V3**  | Current GE tax rate, cap and exemptions — rules have changed                                   | Flipping calculator                                            |
-| **V5**  | WOM rate limits / stance on our anonymous read cadence                                         | Caching design                                                 |
-| V10     | Does a cheap WOM **group-level** update endpoint exist?                                        | P3                                                             |
-| V2      | TempleOSRS terms + API unread (403)                                                            | Collection log                                                 |
-| V9      | Do quest/equipment/drop-table buckets exist?                                                   | Quests, gear compare                                           |
-| V13     | Free-tier cron limits + hosting cost                                                           | [ADR-0006](./docs/adr/0006-hosting-tier-and-scheduled-jobs.md) |
+| #      | Question                                                     | Blocks                                                         |
+| ------ | ------------------------------------------------------------ | -------------------------------------------------------------- |
+| **V3** | Current GE tax rate, cap and exemptions — rules have changed | Flipping calculator                                            |
+| **V5** | WOM rate limits / stance on our anonymous read cadence       | Caching design                                                 |
+| V10    | Does a cheap WOM **group-level** update endpoint exist?      | P3                                                             |
+| V2     | TempleOSRS terms + API unread (403)                          | Collection log                                                 |
+| V9     | Do quest/equipment/drop-table buckets exist?                 | Quests, gear compare                                           |
+| V13    | Free-tier cron limits + hosting cost                         | [ADR-0006](./docs/adr/0006-hosting-tier-and-scheduled-jobs.md) |
 
 ---
 
@@ -173,23 +171,32 @@ preserved in commit **`5202810`** if auth is ever reintroduced — recover with
 `decideAccess()` in particular was mutation-tested and is worth recovering
 rather than reimplementing.
 
+## Built so far
+
+| Module                   | Purpose                                                                            |
+| ------------------------ | ---------------------------------------------------------------------------------- |
+| `lib/api/osrs-fetch.ts`  | The only outbound chokepoint. User-Agent, per-source TTLs, `assertNoFanOut`        |
+| `lib/api/wom-group.ts`   | Clan roster / `gained` leaderboards / competitions. Typed against the real payload |
+| `lib/clan/ranks.ts`      | Rank ordering from `roleOrders`. Pure, no network — **no hardcoded ladder**        |
+| `lib/utils/format-gp.ts` | GP formatting; truncates towards zero so money is never overstated                 |
+
+17 tests. `ranks.test.ts` uses the **real** Void Reavers `roleOrders` fixture.
+
 ## Next tasks (in order)
 
-1. **Answer V14** — get the clan's WOM group ID into `.env.local`, and confirm
-   the group is actively maintained. Everything clan-facing is blocked on it.
-2. **Build the WOM group client** in `src/lib/api/` on top of `osrsFetch()`:
-   roster, `roleOrders`, `gained` leaderboards, competitions. Cache
-   server-side — the roster is 283 KB and must not be fetched per visitor.
-3. **A rank-order helper** that reads `roleOrders` rather than hardcoding a
-   ladder, with tests over a real payload.
-4. First real feature — GE/economy is the highest-value, lowest-dependency
-   group and needs no clan data at all.
+1. **Rate limiting before any upstream-proxying route ships** (see the
+   open-proxy warning above). Currently nothing proxies on demand, so nothing
+   is exposed — that changes the moment a hiscores lookup lands.
+2. **A roster page** rendering `sortByRank`/`groupByRank`, surfacing
+   `player.updatedAt` so staleness is visible rather than implied.
+3. First calculator — GE/economy is the highest-value, lowest-dependency group
+   and needs no clan data at all. **V3 (GE tax) blocks the flipping calculator.**
 
 ## Elsewhere: scaffolded, not implemented
 
 The two remaining tables have no writers; `src/app/page.tsx` is a
-component/token proof, not a real landing page. No calculators, no data fetching
-yet. Only `formatGp` has tests.
+component/token proof, not a real landing page. No pages consume
+`wom-group.ts` yet — the client exists, nothing renders it.
 
 ---
 
