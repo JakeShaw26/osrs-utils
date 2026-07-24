@@ -35,11 +35,10 @@ const serverSchema = z.object({
   // Direct (unpooled) connection, used only by drizzle-kit for migrations.
   DATABASE_URL_UNPOOLED: z.string().url().optional(),
 
-  // Discord OAuth — the client secret must never reach the browser.
-  AUTH_SECRET: z.string().min(32, 'AUTH_SECRET must be at least 32 characters'),
-  AUTH_DISCORD_ID: z.string().min(1),
-  AUTH_DISCORD_SECRET: z.string().min(1),
-  DISCORD_GUILD_ID: z.string().min(1, 'The clan Discord server ID'),
+  // The clan's Wise Old Man group. This is the app's entire notion of clan
+  // identity: membership of this group *is* the roster, and the group's own
+  // roleOrders supply the rank hierarchy. (ADR-0012)
+  WOM_GROUP_ID: z.coerce.number().int().positive(),
 
   // Shared secret for scheduled-job routes. Those routes are public HTTPS URLs;
   // without this check anyone can trigger our refresh loop. (PRD §4.5)

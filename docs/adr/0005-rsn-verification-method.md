@@ -1,8 +1,18 @@
 # ADR-0005: Officer approval for RSN↔Discord linking
 
-- **Status:** Accepted
+- **Status:** **Superseded by
+  [ADR-0012](./0012-no-authentication-public-read-only.md)** (2026-07-24)
 - **Date:** 2026-07-24
 - **Deciders:** PRD §5.3
+
+> **Superseded — the problem no longer exists.** This ADR solved "which Discord
+> account owns this RSN". With no accounts, there is no Discord account to link
+> an RSN _to_. Members are identified by RSN alone, and the Wise Old Man group
+> membership list — maintained by the clan, not by us — is the roster.
+>
+> The trust concern below is genuinely resolved rather than ignored: an outsider
+> cannot corrupt a ranking by claiming an RSN, because rankings are derived from
+> the WOM group rather than from anything a visitor can assert.
 
 ## Context
 

@@ -19,8 +19,11 @@ const nextConfig: NextConfig = {
           { key: 'X-Content-Type-Options', value: 'nosniff' },
           { key: 'X-Frame-Options', value: 'DENY' },
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
-          // Discord OAuth redirects break under an over-strict COOP, so it is
-          // deliberately omitted here rather than set and later debugged.
+          // Now settable: this was omitted while Discord OAuth existed, because
+          // a strict COOP severs the popup/redirect handoff. With no OAuth flow
+          // (ADR-0012) nothing needs cross-origin window access, so isolating
+          // our browsing context costs us nothing.
+          { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
         ],
       },
     ];

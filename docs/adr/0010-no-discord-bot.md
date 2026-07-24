@@ -1,8 +1,19 @@
 # ADR-0010: No Discord bot — OAuth only
 
-- **Status:** Accepted
+- **Status:** **Superseded by
+  [ADR-0012](./0012-no-authentication-public-read-only.md)** (2026-07-24)
 - **Date:** 2026-07-24
 - **Deciders:** Repository owner
+
+> **Superseded.** Discord was removed entirely — not just the bot, but OAuth
+> too. The app has no authentication at all. Retained because its reasoning is
+> still instructive: the V11 analysis below shows how to distinguish a
+> documented precondition from an absent one, and the capability-replacement
+> table applies to any future Discord integration.
+>
+> The empirical V11a check described at the bottom was **never run**, and the
+> script that ran it has been deleted. If Discord is ever reintroduced, that
+> check is still outstanding.
 
 ## Context
 

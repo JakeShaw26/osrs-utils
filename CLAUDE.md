@@ -3,17 +3,23 @@
 Loaded into every AI session. **Keep under ~200 lines** or it stops being read.
 Updating this is part of the definition of done for any architectural change.
 
-**Last updated:** 2026-07-24 (owner decisions: no bot, API-first, ToS compliance)
+**Last updated:** 2026-07-24 (owner decision: **no authentication** — ADR-0012)
 **Current phase:** P0 — Foundation. **No features are implemented.**
 
 ---
 
 ## What this is
 
-A clan-scoped hub of Old School RuneScape utility tools (GE/economy, combat,
-skilling, clues, quests, clan leaderboards and events) with Discord sign-in and
-rank gating. One clan: assume ≤500 members, ≤50 DAU. **Not internet-scale** —
-that assumption justifies most architecture choices.
+A hub of Old School RuneScape utility tools (GE/economy, combat, skilling,
+clues, quests, clan leaderboards) for one clan. One clan: assume ≤500 members,
+≤50 DAU. **Not internet-scale** — that assumption justifies most architecture
+choices.
+
+**There is no sign-in.** The app is public and read-only to everyone
+([ADR-0012](./docs/adr/0012-no-authentication-public-read-only.md)). Clan
+identity comes from a **Wise Old Man group ID** in config; membership of that
+group is the roster. If you find yourself reaching for a session, a user, or a
+permission check — stop, and re-read ADR-0012.
 
 Full requirements: [`PRD.md`](./PRD.md). Decisions: [`docs/adr/`](./docs/adr/).
 
@@ -35,11 +41,14 @@ Full requirements: [`PRD.md`](./PRD.md). Decisions: [`docs/adr/`](./docs/adr/).
 4. **No user-facing request may fan out across clan members.** 500 members at
    WOM's 20 req/min is a 25-minute page load. Read pre-aggregated data.
    `assertNoFanOut()` makes it fail loudly.
-5. **Authorisation is server-side, deny-by-default.** Never send officer data to
-   the client and hide it with CSS. Filter at the query layer. (OWASP A01)
-6. **Role revalidation fails CLOSED.** If the Discord check errors, deny — never
-   fall back to cached roles. Falling back silently defeats the mechanism and
-   lets a kicked officer keep access.
+5. **No public write path may exist.** There is no auth, so _every_ request is
+   anonymous and untrusted. The only writers are `CRON_SECRET`-authenticated
+   scheduled jobs and build-time fetches. A route handler that mutates state for
+   a public caller is a defect. (OWASP A01 — ADR-0012)
+6. **Never build anything that assumes a signed-in user.** No sessions, no
+   accounts, no officer-only views, no per-user server state. Personal data
+   (flip logs, timers, gear setups) belongs in the member's **browser**
+   (`localStorage`/IndexedDB), never in our database.
 7. **Never put a secret in a `NEXT_PUBLIC_*` variable.** Next.js inlines those
    into the client bundle.
 8. **Never use `osrsbox-db`.** Looks authoritative, README claims weekly
@@ -55,25 +64,38 @@ Full requirements: [`PRD.md`](./PRD.md). Decisions: [`docs/adr/`](./docs/adr/).
 
 ## Settled decisions
 
-| Area             | Decision                                                           | ADR                                                          |
-| ---------------- | ------------------------------------------------------------------ | ------------------------------------------------------------ |
-| Hosting          | Next.js App Router, serverless routes                              | [0001](./docs/adr/0001-serverless-nextjs-architecture.md)    |
-| Database         | Managed Postgres (Neon/Supabase) + Drizzle                         | [0001](./docs/adr/0001-serverless-nextjs-architecture.md)    |
-| Player tracking  | **Delegated to Wise Old Man** — do not build snapshotting          | [0002](./docs/adr/0002-delegate-tracking-to-wise-old-man.md) |
-| Price history    | 4 fixed ranges (2d/15d/90d/1y). No multi-year — data doesn't exist | [0003](./docs/adr/0003-price-history-depth.md)               |
-| Static game data | OSRS Wiki **Bucket** API, fetched at build time                    | [0004](./docs/adr/0004-reject-osrsbox-db.md)                 |
-| RSN linking      | Officer manual approval                                            | [0005](./docs/adr/0005-rsn-verification-method.md)           |
-| Hosting tier     | **Deferred until the app is built** — keep jobs host-agnostic      | [0006](./docs/adr/0006-hosting-tier-and-scheduled-jobs.md)   |
-| Third-party code | **API-first; copy nothing**                                        | [0007](./docs/adr/0007-api-first-no-code-redistribution.md)  |
-| Styling          | Tailwind v4, CSS-first, two-layer semantic tokens                  | [0008](./docs/adr/0008-tailwind-v4-css-first-theming.md)     |
-| Components       | Atomic design, lint-enforced layering                              | [0009](./docs/adr/0009-atomic-design-conventions.md)         |
-| Discord          | **OAuth only — no bot, ever**                                      | [0010](./docs/adr/0010-no-discord-bot.md)                    |
-| API compliance   | Non-commercial, read-only, self-limiting                           | [0011](./docs/adr/0011-third-party-api-compliance.md)        |
+| Area             | Decision                                                           | ADR                                                           |
+| ---------------- | ------------------------------------------------------------------ | ------------------------------------------------------------- |
+| Hosting          | Next.js App Router, serverless routes                              | [0001](./docs/adr/0001-serverless-nextjs-architecture.md)     |
+| Database         | Managed Postgres (Neon/Supabase) + Drizzle                         | [0001](./docs/adr/0001-serverless-nextjs-architecture.md)     |
+| Player tracking  | **Delegated to Wise Old Man** — do not build snapshotting          | [0002](./docs/adr/0002-delegate-tracking-to-wise-old-man.md)  |
+| Price history    | 4 fixed ranges (2d/15d/90d/1y). No multi-year — data doesn't exist | [0003](./docs/adr/0003-price-history-depth.md)                |
+| Static game data | OSRS Wiki **Bucket** API, fetched at build time                    | [0004](./docs/adr/0004-reject-osrsbox-db.md)                  |
+| ~~RSN linking~~  | ~~Officer manual approval~~ — **obsolete, no accounts to link to** | ~~[0005](./docs/adr/0005-rsn-verification-method.md)~~        |
+| Hosting tier     | **Deferred until the app is built** — keep jobs host-agnostic      | [0006](./docs/adr/0006-hosting-tier-and-scheduled-jobs.md)    |
+| Third-party code | **API-first; copy nothing**                                        | [0007](./docs/adr/0007-api-first-no-code-redistribution.md)   |
+| Styling          | Tailwind v4, CSS-first, two-layer semantic tokens                  | [0008](./docs/adr/0008-tailwind-v4-css-first-theming.md)      |
+| Components       | Atomic design, lint-enforced layering                              | [0009](./docs/adr/0009-atomic-design-conventions.md)          |
+| ~~Discord~~      | ~~OAuth only — no bot~~ — **Discord removed entirely**             | ~~[0010](./docs/adr/0010-no-discord-bot.md)~~                 |
+| API compliance   | Non-commercial, read-only, self-limiting                           | [0011](./docs/adr/0011-third-party-api-compliance.md)         |
+| **Auth**         | **None. Public, read-only. Clan identity = WOM group ID**          | [0012](./docs/adr/0012-no-authentication-public-read-only.md) |
 
-### Consequences of "no bot" that are easy to forget
+### Consequences of "no auth" that are easy to forget
 
-- **Reminders** (farm runs) use **Web Push**, not Discord DMs.
-- **Announcements** use a **Discord incoming webhook** (a URL — no bot needed).
+- **Officer-only views are impossible**, not merely hard. Anything unfit for
+  public view must not be built. Hiding it client-side is the exact OWASP A01
+  failure hard rule #5 exists to prevent.
+- **Custom clan events / bingo boards are gone** — they need trusted writes.
+  WOM competitions cover the common case; bespoke events do not survive.
+- **Self-declared trackers** (CAs, diaries, quests) live in browser storage and
+  vanish if a member clears it. Offer export/import.
+- **⚠️ We are now an open proxy unless deliberately defended.** The PRD's fix for
+  this was "hiscores lookup requires login" — void, there is no login. Any route
+  proxying an upstream API needs **edge/IP rate limiting + a shared cache +
+  preferably scheduled pre-aggregation** before it ships, or a stranger hammers
+  Jagex from our IP and _we_ get blocked. (PRD §5.3)
+- **Everything is cacheable** — no per-user variation, so responses cache at the
+  edge for all visitors. Caching is a security control here, not just speed.
 - **Scheduling** comes from platform cron or an external trigger hitting a
   `CRON_SECRET`-protected route. Never assume a persistent process exists.
 
@@ -108,6 +130,17 @@ Detail in [`docs/api-notes/`](./docs/api-notes/). Verified 2026-07-24:
   wrong; it's `high_alchemy_value` and `name`. Introspect the schema first.
 - **`infobox_monster` has 55 fields**, enough for a full DPS calculator.
 - **Wise Old Man:** 20 req/min, 100 with a free API key. MIT, actively maintained.
+- **WOM group endpoints need no auth and no key** (probed 2026-07-24, group 82):
+  - `GET /v2/groups/{id}` → **all 488 memberships in one 283 KB response**, each
+    with `role` and an embedded `player` carrying `exp`/`ehp`/`ehb`/`updatedAt`.
+    A total-XP leaderboard therefore costs **zero** extra requests.
+  - **`roleOrders`** on that payload is the clan's own rank hierarchy as
+    `{role, index}`. **Never hardcode a rank ladder** — read this.
+  - `GET /v2/groups/{id}/gained?metric=&period=` → 485 ranked rows, one call.
+  - `GET /v2/groups/{id}/competitions` → competitions with metrics and dates.
+  - Roles are real OSRS ranks (`owner`, `deputy_owner`, … `recruit`,
+    `gnome_child`), not generic ones.
+  - **Cache these server-side.** 283 KB per visitor is not acceptable.
 - **No DPS-calculation API exists.** The official calculator is client-side. We
   implement formulas ourselves from published maths, with golden-file tests.
 
@@ -115,73 +148,48 @@ Detail in [`docs/api-notes/`](./docs/api-notes/). Verified 2026-07-24:
 
 ## Open questions
 
-Full list: PRD §9.1. **V1 and V11 are resolved** (ADR-0011, ADR-0010).
+Full list: PRD §9.1. **V1, V11 resolved** (ADR-0011, ADR-0010). **V11a and V4
+are moot** — there is no auth and no RSN linking to verify (ADR-0012).
 
-| #        | Question                                                                                                              | Blocks                                                         |
-| -------- | --------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| **V11a** | **10-min check:** confirm `guilds.members.read` returns roles with the app NOT in the guild. Auth model depends on it | **P0 — do first**                                              |
-| **V10**  | Does a cheap WOM **group-level** update endpoint exist?                                                               | P3                                                             |
-| **V3**   | Current GE tax rate, cap and exemptions — rules have changed                                                          | Flipping calculator                                            |
-| V2       | TempleOSRS terms + API unread (403)                                                                                   | Collection log                                                 |
-| V5       | WOM stance on scheduled group updates                                                                                 | Before P3                                                      |
-| V4       | Hiscores update latency → is the XP-delta RSN challenge viable?                                                       | Self-serve linking                                             |
-| V9       | Do quest/equipment/drop-table buckets exist?                                                                          | Quests, gear compare                                           |
-| V13      | Free-tier cron limits + hosting cost                                                                                  | [ADR-0006](./docs/adr/0006-hosting-tier-and-scheduled-jobs.md) |
+| #       | Question                                                                                       | Blocks                                                         |
+| ------- | ---------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| **V14** | **The clan's own WOM group ID — and is it kept current?** Everything clan-facing depends on it | **Every clan feature**                                         |
+| **V3**  | Current GE tax rate, cap and exemptions — rules have changed                                   | Flipping calculator                                            |
+| **V5**  | WOM rate limits / stance on our anonymous read cadence                                         | Caching design                                                 |
+| V10     | Does a cheap WOM **group-level** update endpoint exist?                                        | P3                                                             |
+| V2      | TempleOSRS terms + API unread (403)                                                            | Collection log                                                 |
+| V9      | Do quest/equipment/drop-table buckets exist?                                                   | Quests, gear compare                                           |
+| V13     | Free-tier cron limits + hosting cost                                                           | [ADR-0006](./docs/adr/0006-hosting-tier-and-scheduled-jobs.md) |
 
 ---
 
-## P0 auth — in progress
+## The auth module was deleted
 
-**Built and tested (52 tests passing):**
+`src/lib/auth/` (7 modules, 52 tests), the sign-in page, the Auth.js route, and
+the Discord verification script were **removed** when ADR-0012 landed. They are
+preserved in commit **`5202810`** if auth is ever reintroduced — recover with
+`git show 5202810:src/lib/auth/access.ts`, don't rewrite from scratch.
 
-| Module                     | Purpose                                                                         |
-| -------------------------- | ------------------------------------------------------------------------------- |
-| `lib/auth/tiers.ts`        | Tier hierarchy + Discord role → tier. Highest wins; unknown roles ignored       |
-| `lib/auth/access.ts`       | **`decideAccess()` — the fail-closed decision.** Pure function, mutation-tested |
-| `lib/auth/discord.ts`      | Guild-member fetch; maps each HTTP status to a `RoleCheck`                      |
-| `lib/auth/role-mapping.ts` | Loads role map from `clan_config`; malformed config → `{}` → guest              |
-| `lib/auth/session.ts`      | `requireTier()` / `assertTier()` — the one authorisation entry point            |
-| `lib/auth/config.ts`       | Auth.js v5, scopes `identify guilds guilds.members.read`, guild gate at sign-in |
-| `app/signin/page.tsx`      | Server-rendered sign-in, no client JS                                           |
+`decideAccess()` in particular was mutation-tested and is worth recovering
+rather than reimplementing.
 
-**Design notes worth not re-deriving:**
+## Next tasks (in order)
 
-- `requireTier` defaults `privileged` to **true** for officer+ requirements, so
-  forgetting the flag produces a _stricter_ check, never a weaker one.
-- Only **404** is treated as "not a member" (revokes session). 401/403 are
-  `unavailable` — treating 403 as absence would de-link the whole clan on one
-  scope misconfiguration.
-- Malformed 200 payloads → `unavailable`, never `guest`. Silently stripping
-  permissions looks like success and is hard to diagnose.
-
-### ⚠️ Blocking: run V11a before going further
-
-```bash
-npm run verify:discord     # needs .env.local + a throwaway Discord app
-```
-
-Create the app at discord.com/developers, add redirect URI
-`http://localhost:53134/callback`, and **do not add it to the guild** — that is
-the whole point of the test. A `200` with a `roles` array confirms ADR-0010.
-
-### Next auth tasks (in order)
-
-1. **Run V11a.** Everything below assumes it passes.
-2. **Move Discord tokens out of the JWT into the database**, with refresh
-   rotation and encryption at rest. Currently they live in the Auth.js JWE
-   cookie — encrypted and httpOnly, but PRD §5.2 asks for server-side storage.
-   **Known deviation, flagged in `lib/auth/config.ts`.**
-3. **Persist members on sign-in** (`members` table), then wire
-   `cached_role` / `roles_checked_at` into `requireTier`'s `cached` argument —
-   currently `undefined`, so an outage denies rather than serving stale roles.
-   Safe, but stricter than designed.
-4. Seed `clan_config` with the role mapping from V11a's output.
-5. RSN link submission + officer approval queue.
+1. **Answer V14** — get the clan's WOM group ID into `.env.local`, and confirm
+   the group is actively maintained. Everything clan-facing is blocked on it.
+2. **Build the WOM group client** in `src/lib/api/` on top of `osrsFetch()`:
+   roster, `roleOrders`, `gained` leaderboards, competitions. Cache
+   server-side — the roster is 283 KB and must not be fetched per visitor.
+3. **A rank-order helper** that reads `roleOrders` rather than hardcoding a
+   ladder, with tests over a real payload.
+4. First real feature — GE/economy is the highest-value, lowest-dependency
+   group and needs no clan data at all.
 
 ## Elsewhere: scaffolded, not implemented
 
-Other tables have no writers; `src/app/page.tsx` is a component/token proof, not
-a real landing page. No calculators, no data fetching yet.
+The two remaining tables have no writers; `src/app/page.tsx` is a
+component/token proof, not a real landing page. No calculators, no data fetching
+yet. Only `formatGp` has tests.
 
 ---
 

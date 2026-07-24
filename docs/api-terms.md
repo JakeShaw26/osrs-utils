@@ -144,22 +144,21 @@ to automated fetch; unverified** (PRD V2).
 
 ---
 
-## 5. Discord
+## 5. Discord — no longer used
 
-**Source:** [Developer ToS](https://discord.com/developers/docs/policies-and-agreements/developer-terms-of-service) ·
-[Developer Policy](https://discord.com/developers/docs/policies-and-agreements/developer-policy)
+**We do not call the Discord API at all** ([ADR-0012](./adr/0012-no-authentication-public-read-only.md)).
+There is no OAuth application, no bot, no stored tokens, and no Discord data of
+any kind. The Developer ToS therefore does not bind us.
 
-### Rules
+The compliance consequence is the useful part: **we hold no personal data**. No
+Discord IDs, no usernames, no avatars, no tokens. Deletion requests are
+trivially satisfied because there is nothing to delete, and a breach of our
+database would expose public game statistics and nothing else.
 
-1. **Request minimum scopes:** `identify`, `guilds`, `guilds.members.read`. Never
-   request more "just in case" — each extra scope is data we must protect.
-2. **Store the minimum**: Discord ID, username, avatar, roles. No message
-   content, no email unless genuinely needed.
-3. **Tokens are credentials.** Server-side only, encrypted at rest, never in
-   localStorage or a JS-readable cookie.
-4. **Honour deletion.** If a member leaves the clan or asks, delete their data.
-5. **Respect rate limits** via `X-RateLimit-*` headers. Not a practical concern
-   at our scale.
+If Discord is ever reintroduced, the previous rules applied and should be
+restored: minimum scopes (`identify`, `guilds`, `guilds.members.read`), store
+the minimum, treat tokens as credentials (server-side, encrypted at rest, never
+JS-readable), honour deletion, and respect `X-RateLimit-*`.
 
 ---
 

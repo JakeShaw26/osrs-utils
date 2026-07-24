@@ -18,7 +18,9 @@
 
 ### 1.1 What this is
 
-A single web hub collecting Old School RuneScape utility tools, scoped to one clan, gated behind Discord sign-in with clan-role-aware permissions. It replaces the current situation where members bounce between the Wiki, a DPS calculator, a flipping spreadsheet, Wise Old Man, and a pinned Discord message of bingo scores.
+A single web hub collecting Old School RuneScape utility tools, scoped to one clan. It replaces the current situation where members bounce between the Wiki, a DPS calculator, a flipping spreadsheet, Wise Old Man, and a pinned Discord message of bingo scores.
+
+**There is no sign-in** ([ADR-0012](./docs/adr/0012-no-authentication-public-read-only.md)). The app is public and read-only; the clan is identified by its Wise Old Man group, and every tool is a shareable URL.
 
 ### 1.2 Goals
 
@@ -26,7 +28,7 @@ A single web hub collecting Old School RuneScape utility tools, scoped to one cl
 | --- | ------------------------------------------------------- | -------------------------------------------------------------------------- |
 | G1  | One destination for the calculators members already use | Members stop linking external calculators in Discord for covered use cases |
 | G2  | Clan-social layer that no external tool provides        | Leaderboards/events used in ≥1 clan event per month                        |
-| G3  | Identity that is actually trustworthy                   | Every ranked member has a verified RSN↔Discord link                        |
+| G3  | Rankings nobody can game                                | Every ranked figure derives from the WOM group, never from a visitor claim |
 | G4  | Cheap to run and maintain by one developer              | Hosting ≤ £35/mo (see §1.6); no scheduled job requires babysitting         |
 
 ### 1.6 Hosting cost — deferred by decision
@@ -372,9 +374,25 @@ Each feature lists its data source ID, a decision, and any feature-specific cons
 | **Wilderness death-risk calculator** | Authored rules (items kept on death, protect-item, skull) + DS-1 prices. Rules are subtle and change; version them.                                                                                                                |
 | **Daily/weekly reset tracker**       | Pure date maths against known reset times. Must handle UTC vs local and BST correctly — a classic source of off-by-one-hour bugs. No API.                                                                                          |
 
-### 3.8 Clan layer — _DS-5 + own DB + DS-7_
+### 3.8 Clan layer — _DS-5 only_
 
 **Shared decision:** competitive/tracking features delegate to WOM; clan-specific state we own.
+
+> **⚠️ Substantially revised by [ADR-0012](./docs/adr/0012-no-authentication-public-read-only.md).**
+> With no accounts, **"own DB" is no longer available** for anything per-member,
+> and DS-7 (Discord) is gone entirely. Verified 2026-07-24: WOM group endpoints
+> supply the roster, ranks (`roleOrders`), gained-leaderboards and competitions
+> anonymously, in **one request each** — so the rows below sourced from DS-5 get
+> _easier_. The rows sourced from "own DB" do not survive:
+>
+> | Row                         | Fate                                                                                     |
+> | --------------------------- | ---------------------------------------------------------------------------------------- |
+> | Leaderboards, XP deltas     | **Unchanged** — DS-5, one call, no fan-out                                               |
+> | Clan events / bingo         | **Dropped.** Needs trusted member writes. WOM competitions cover the common case         |
+> | Shared flipping log         | **Dropped as shared.** Becomes a private browser-local log; no clan aggregate            |
+> | Collection log / CA / diary | **Dropped as clan-wide.** Member-declared data is browser-local and cannot be aggregated |
+> | Group PvM tools             | **Kept** — pure arithmetic over inputs typed in the page                                 |
+> | Rank-gated views            | **Impossible.** Ranks are now display-only labels, never a permission                    |
 
 | Feature                                | Source        | Decision & constraints                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | -------------------------------------- | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -520,111 +538,58 @@ This also resolved **V11**: OAuth-only role gating does not require a bot in the
 
 ---
 
-## 5. Auth & Clan Verification
+## 5. Security Model (auth removed)
 
-### 5.1 Flow
-
-Standard OAuth2 Authorization Code flow with Discord, server-side:
-
-1. User clicks "Sign in with Discord" → redirect with scopes `identify guilds guilds.members.read` and a **`state` parameter (CSRF protection — mandatory, not optional)**.
-2. Discord redirects back with a code; the **server** exchanges it for a token using the client secret.
-3. Server calls the guild member endpoint for our clan guild ID.
-   - Not a member → rejected with a join link.
-   - Member → read the `roles` array.
-4. Map Discord role IDs → app permissions (§5.4).
-5. Issue **our own session** (httpOnly, Secure, SameSite=Lax cookie). Store the Discord access token **server-side only**, never in a cookie readable by JS and never in localStorage.
-
-**Recommendation: Auth.js (NextAuth) with the Discord provider**, extended to fetch guild roles in the callback. Hand-rolling OAuth is a well-known source of subtle security bugs; use the maintained library.
-
-### 5.2 Session and role-freshness model
-
-**Roles are a snapshot, and this is the subtle risk.** If we cache roles for the session lifetime, a demoted or kicked member keeps Officer access until it expires.
-
-**Decision:** short session (24h) + **re-verify roles server-side on any access to Officer-gated data or any privileged mutation**, not merely at login. Read-only member views may use cached roles for up to 15 minutes. This bounds the damage window for a demotion to minutes on the routes that matter, rather than a day.
-
-> **⚠️ Revalidation must fail CLOSED. This is the load-bearing detail of the whole section.**
+> **§5 superseded by [ADR-0012](./docs/adr/0012-no-authentication-public-read-only.md) — 2026-07-24.**
+> The Discord OAuth flow, session and role-freshness model, RSN↔Discord linking,
+> and the five-tier permission model are **removed**. The app has no
+> authentication. The original text is preserved in git commit `5202810` and the
+> reasoning in ADR-0005 and ADR-0010.
 >
-> Revalidation means calling Discord's guild-member endpoint with the stored access token.
-> That call can fail four ways: token expired, Discord is down, the user revoked our app's
-> authorisation, or **the user was kicked from the guild (a 404, not a stale-role response)**.
->
-> The intuitive implementation — "call failed, so keep the cached roles and carry on" — is the
-> easy path and it **silently defeats this entire mechanism**. A kicked or demoted Officer
-> would retain access indefinitely, which is precisely the vulnerability this section exists
-> to close. An outage would become a privilege-escalation window.
->
-> **Required behaviour:**
->
-> - Any revalidation error on a privileged route → **deny the action and force re-authentication.** Never fall back to cache.
-> - Distinguish `404 / not a member` (revoke session immediately, delete cached roles) from `5xx / transient` (deny _this_ privileged action, allow read-only member views to continue on cache within the 15-minute window).
-> - Degrading to a lower privilege tier on error is acceptable; degrading to a _higher_ one never is.
->
-> **Token lifecycle (unspecified in v1.0):** Discord access tokens expire. Store the **refresh
-> token** server-side and rotate proactively; if refresh fails, end the session rather than
-> holding a dead token. Encrypt both tokens at rest — the scopes are read-only, so this is
-> defence-in-depth rather than critical, but the DB is not the right place for bearer
-> credentials in plaintext.
+> Read §5.3 below even if you skip the rest: **one security requirement got
+> harder, not easier, and its original mitigation no longer exists.**
 
-### 5.3 RSN ↔ Discord linking — recommended method
+### 5.1 The model
 
-The brief asks for one method, chosen and justified. Options assessed:
+No accounts, no sessions, no sign-in. Every visitor is anonymous and identical.
 
-| Method                      | Assessment                                                                                                                                                                                                                                                                                                                                            |
-| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Display-name challenge**  | Suggested in the brief, but **OSRS display name changes are slow, rate-limited, and cost real money.** Asking members to rename their account to prove ownership is hostile and, for many, impossible. **Rejected as impractical** — this is a case where the brief's suggestion doesn't survive contact with the game's mechanics.                   |
-| **XP-delta challenge**      | Elegant: snapshot the RSN's XP, ask the user to gain a specified small amount in a named skill within a window, confirm via hiscores delta. Genuinely proves account control using only public data. **But** hiscores update latency is **[UNVERIFIED]** and believed to be periodic rather than instant — if updates lag by hours, the UX collapses. |
-| **Officer manual approval** | Officer confirms in-game identity (members are already vetted at recruitment) and approves in-app. Deterministic, zero external dependencies.                                                                                                                                                                                                         |
+- **Clan identity** = the Wise Old Man group ID in `WOM_GROUP_ID`. Membership of that group _is_ the roster; the group's `roleOrders` supply the rank hierarchy.
+- **Member identity** = RSN, and nothing else.
+- **Personal data** (flip logs, timers, gear setups, self-declared diaries) lives in the member's browser via `localStorage`/IndexedDB. It never reaches our server — so there is nothing to leak, and no privacy policy to write.
+- **The only writers** in the system are `CRON_SECRET`-authenticated scheduled jobs and build-time fetches. Any route handler that mutates state for an anonymous caller is a defect.
 
-**Decision: officer manual approval for MVP; XP-delta challenge as a Phase 2 self-serve upgrade, gated on verifying hiscores update latency.**
+### 5.2 What this designs out, and what it does not
 
-Justification: the clan already performs identity vetting at recruitment, so this adds no new human process — it relocates an existing one. It has **no dependency on unverified third-party behaviour**, which matters because the XP-delta approach's viability rests on exactly the fact I could not confirm. Volume is low (one approval per new member), so the manual cost is negligible at this scale. Choosing the verifiable-today option over the elegant-but-unverified one is the right trade when a wrong guess blocks onboarding entirely.
+**Removed as categories, not merely mitigated:** broken access control (OWASP A01), identification/authentication failures (A07), session fixation, privilege escalation, account takeover, credential storage, password reset flows, and personal data at rest.
 
-**Cardinality (unstated in v1.0, and it affects the schema):**
+This is a genuine security _improvement_. The most reliable way to not have an authorisation bug is to have nothing to authorise.
 
-- **One RSN → at most one Discord account.** Enforced by a unique constraint. Without it, two members claim the same RSN and every leaderboard is corrupt.
-- **One Discord account → many RSNs.** Deliberately allowed: mains plus ironmen and alts are normal in OSRS clans, and forbidding it would push members to lie. Each link is approved independently, and **exactly one is flagged `is_primary`** for leaderboard purposes so alts cannot be used to farm multiple leaderboard entries.
+**Untouched by the change:** injection (A03), SSRF (A10), vulnerable dependencies (A06), and **rate-limit abuse** — which is now the dominant risk.
 
-**Race condition on the approval queue:** two members may submit link requests for the same
-RSN before an officer processes either. The unique constraint fires at _approval_ time, not
-submission, so the officer UI must surface competing claims side by side rather than letting
-the second approval fail with a database error. Approving one auto-rejects the others with a
-reason.
+### 5.3 ⚠️ Open proxy — the one thing this made WORSE
 
-**Anti-abuse regardless of method:** re-linking requires officer approval and is audit-logged.
+PRD v1.1 identified the risk plainly: any endpoint of ours that proxies an upstream API lets a stranger hammer Jagex or the Wiki **from our IP**, and it is _we_ who get blocked. The mitigation it chose was:
 
-### 5.4 Permission model
+> "Decision: hiscores lookup requires login … gating it gives us a stable identity to rate-limit."
 
-Map Discord role IDs to internal permissions via **configuration, not hardcoded IDs**:
+**That mitigation no longer exists.** There is no login, therefore no per-user identity, therefore no per-user rate limit. The dividing line the PRD drew — _anything that proxies an upstream API requires auth; anything that is pure client-side maths does not_ — is no longer available to us.
 
-| Tier                 | Sees                                                                  |
-| -------------------- | --------------------------------------------------------------------- |
-| **Guest** (no login) | Public calculators only                                               |
-| **Applicant**        | Calculators + own profile; no clan data                               |
-| **Member**           | Full calculators, leaderboards, events, own logs                      |
-| **Officer**          | + recruitment tools, applicant review, event admin, RSN link approval |
-| **Admin**            | + clan config, role mapping                                           |
+The requirement survives; only the implementation must change. **Before any endpoint that proxies an upstream API ships:**
 
-**Implementation requirements (all OWASP A01):**
+1. **Edge/IP rate limiting is mandatory**, not a second layer. It is now the _only_ layer. An unlimited public hiscores proxy is the single most likely way this project gets its IP blocked by Jagex, and would breach `docs/api-terms.md` (self-limiting).
+2. **Cache aggressively and share the cache across all visitors.** With no per-user variation, a hiscores or roster response can serve every visitor from one upstream fetch. Caching is now a _security control_, not just a performance one — it decouples our outbound request rate from our inbound traffic.
+3. **Prefer pre-aggregated, scheduled fetches over on-demand proxying.** A cron job that refreshes the roster on a fixed cadence has an upstream request rate that is constant regardless of how much traffic we receive. This is the strongest available answer and should be the default.
+4. **Never let a URL parameter reach an upstream host unvalidated** (see §5.4).
 
-- Permission checks live in **one server-side module**; every protected Route Handler calls it.
-- **Deny by default** — a new route with no explicit check must fail closed, not open.
-- Officer-only data must **never be sent to the client and hidden with CSS**. Filter at the query layer.
-- Privileged mutations are audit-logged (actor, action, target, timestamp). **The audit log is append-only, readable by Admin only, and never mutable through the application** — a log that officers can edit provides no accountability against the people it exists to hold accountable.
+**This is an open question with teeth, not a note.** It blocks the first feature that touches an upstream API on request.
 
-### 5.5 Additional security requirements
+### 5.4 Remaining requirements
 
-- **Rate-limit our own endpoints per user**, especially hiscores lookup — otherwise we are an open proxy that lets anyone use us to hammer Jagex from our IP, which gets _us_ blocked.
-  > **⚠️ "Per user" is meaningless for anonymous traffic — v1.0 had a hole here.** §5.4 grants
-  > Guests access to public tools, and hiscores lookup was not explicitly gated, so there is no
-  > user identity to key a limit on. **Decision: hiscores lookup requires login.** It is a
-  > clan tool, the RSN autocomplete is more useful for members anyway, and gating it gives us a
-  > stable identity to rate-limit. Public calculators stay open because they make **no outbound
-  > requests** — that is the actual dividing line: _anything that proxies an upstream API
-  > requires auth; anything that is pure client-side maths does not._
-  > Apply IP-based limiting at the edge as a second layer for the login route itself.
-- Validate/allowlist all user input server-side, particularly RSNs (12 chars, `[A-Za-z0-9 _-]`) before interpolating into upstream URLs. _(SSRF/injection — never pass raw user input into an outbound URL.)_
-- Secrets via environment variables only; never `NEXT_PUBLIC_*`. **`NEXT_PUBLIC_` prefixed vars are inlined into the client bundle** — putting the Discord client secret there would publish it to every visitor.
-- CSRF protection on state-changing routes.
+- **Validate and allowlist all user input server-side**, particularly RSNs (12 chars, `[A-Za-z0-9 _-]`) before interpolating into upstream URLs. _(SSRF/injection — never pass raw user input into an outbound URL.)_ This matters **more** now: with no auth, every input is from an untrusted stranger by definition.
+- **Secrets via environment variables only; never `NEXT_PUBLIC_*`.** Those are inlined into the client bundle and published to every visitor. `src/lib/env.ts` is `server-only` so importing it from a client component is a build error rather than a silent leak.
+- **`CRON_SECRET` is the entire write-side security model.** It is no longer one control among several. A scheduled-job route that forgets to verify it is a public write endpoint.
+- **CSRF protection is largely moot** — there are no authenticated state-changing routes, and cron routes authenticate by bearer secret rather than by cookie, so there is no ambient authority for an attacker to ride. Reintroduce it the moment any cookie-authenticated mutation appears.
+- **A strict `Cross-Origin-Opener-Policy: same-origin` is now set** in `next.config.ts`; it was previously omitted because it breaks OAuth redirect handoffs.
 
 ---
 
@@ -838,17 +803,17 @@ committed the sin it warns others about.
 
 ### Major
 
-| #   | Finding                                                                                                           | Resolution                                                                                                                                                                               |
-| --- | ----------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| M1  | `guilds.members.read` may require bot presence in the guild → P0 auth would secretly depend on the P3 bot.        | Accepted. Added as **V11**, flagged as blocking the first sprint. The review was appropriately uncertain here; it's now a pre-P0 check rather than an assumption in either direction.    |
-| M2  | Per-user rate limiting is meaningless for anonymous traffic, so the open-proxy risk (R3) was not actually closed. | Accepted. §5.5 now **requires login for hiscores lookup**, with the general rule: anything proxying an upstream API needs auth; pure client-side maths does not.                         |
-| M3  | Farm-run timer sat in P2 but its reminders need the P3 bot.                                                       | Accepted. §1.5 splits it — timer UI in P2, push delivery in P3 — plus a general rule that features are split across phases rather than shipped half-working.                             |
-| M4  | §3.5 Account tools had no phase in §1.5.                                                                          | Accepted. Hiscores lookup → P1; account value → P2; progress tracking and time-to-goal → P3 (WOM-dependent). Added the invariant that every §3 feature appears in exactly one phase.     |
-| M5  | §4.4 omitted timer state and declared inventories that §3 requires persisting.                                    | Accepted. Added those plus the approval queue, job cursor, and audit log — five write paths the data model had missed.                                                                   |
-| M6  | §3.4 forbade CAs in competitive contexts while §3.8 left a composite % open.                                      | Accepted. Resolved in favour of the stricter reading: no blended verified/self-reported percentage.                                                                                      |
-| M7  | No cold-start plan for importing ~500 members into WOM.                                                           | Accepted. Added to §4.5 as an explicit launch task (**V12**), to be run as a one-off script, never from a serverless function.                                                           |
-| M8  | No serverless↔Postgres connection-pooling guidance.                                                               | Accepted. Added as a hard build requirement in §4.2, noting it fails only under load — never locally.                                                                                    |
-| M9  | `[VERIFIED]` overreach on "hiscores has no history" — one positive test cannot prove absence of a capability.     | **Accepted; correct on the epistemics.** Rescoped to "this endpoint returns a snapshot; no known public endpoint provides history." Design impact unchanged, claim now matches evidence. |
+| #   | Finding                                                                                                           | Resolution                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| --- | ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| M1  | `guilds.members.read` may require bot presence in the guild → P0 auth would secretly depend on the P3 bot.        | Accepted. Added as **V11**, flagged as blocking the first sprint. The review was appropriately uncertain here; it's now a pre-P0 check rather than an assumption in either direction.                                                                                                                                                                                                                                                |
+| M2  | Per-user rate limiting is meaningless for anonymous traffic, so the open-proxy risk (R3) was not actually closed. | Accepted, then **REOPENED by [ADR-0012](./docs/adr/0012-no-authentication-public-read-only.md)**. The original fix — "requires login for hiscores lookup" — is void now that there is no login. The finding stands and is now **all** traffic, not an edge case. See **§5.3**: edge/IP limiting plus shared caching plus scheduled pre-aggregation, with no auth-shaped fallback. Fable was right the first time and is right again. |
+| M3  | Farm-run timer sat in P2 but its reminders need the P3 bot.                                                       | Accepted. §1.5 splits it — timer UI in P2, push delivery in P3 — plus a general rule that features are split across phases rather than shipped half-working.                                                                                                                                                                                                                                                                         |
+| M4  | §3.5 Account tools had no phase in §1.5.                                                                          | Accepted. Hiscores lookup → P1; account value → P2; progress tracking and time-to-goal → P3 (WOM-dependent). Added the invariant that every §3 feature appears in exactly one phase.                                                                                                                                                                                                                                                 |
+| M5  | §4.4 omitted timer state and declared inventories that §3 requires persisting.                                    | Accepted. Added those plus the approval queue, job cursor, and audit log — five write paths the data model had missed.                                                                                                                                                                                                                                                                                                               |
+| M6  | §3.4 forbade CAs in competitive contexts while §3.8 left a composite % open.                                      | Accepted. Resolved in favour of the stricter reading: no blended verified/self-reported percentage.                                                                                                                                                                                                                                                                                                                                  |
+| M7  | No cold-start plan for importing ~500 members into WOM.                                                           | Accepted. Added to §4.5 as an explicit launch task (**V12**), to be run as a one-off script, never from a serverless function.                                                                                                                                                                                                                                                                                                       |
+| M8  | No serverless↔Postgres connection-pooling guidance.                                                               | Accepted. Added as a hard build requirement in §4.2, noting it fails only under load — never locally.                                                                                                                                                                                                                                                                                                                                |
+| M9  | `[VERIFIED]` overreach on "hiscores has no history" — one positive test cannot prove absence of a capability.     | **Accepted; correct on the epistemics.** Rescoped to "this endpoint returns a snapshot; no known public endpoint provides history." Design impact unchanged, claim now matches evidence.                                                                                                                                                                                                                                             |
 
 ### Minor
 

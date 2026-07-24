@@ -2,7 +2,7 @@
   "name": "osrs-clan-toolkit",
   "version": "0.1.0",
   "private": true,
-  "description": "A clan-scoped hub of Old School RuneScape utility tools with Discord auth and rank gating.",
+  "description": "A public, read-only hub of Old School RuneScape utility tools for one clan.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -17,14 +17,12 @@
     "db:studio": "drizzle-kit studio",
     "check": "npm run typecheck && npm run lint && npm run format:check && npm run test",
     "test": "vitest run",
-    "test:watch": "vitest",
-    "verify:discord": "node --env-file=.env.local scripts/verify-discord-oauth.mjs"
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",
     "drizzle-orm": "^0.45.2",
     "next": "^16.2.11",
-    "next-auth": "^5.0.0-beta.32",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "server-only": "^0.0.1",

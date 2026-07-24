@@ -20,20 +20,21 @@ retroactively. A retroactive ADR records rationalisation, not reasoning: the
 alternatives genuinely weighed are forgotten within days, and those are the most
 valuable part.
 
-| ADR                                                     | Title                                         | Status       |
-| ------------------------------------------------------- | --------------------------------------------- | ------------ |
-| [0000](./adr/0000-template.md)                          | Template                                      | —            |
-| [0001](./adr/0001-serverless-nextjs-architecture.md)    | Serverless Next.js with managed Postgres      | Accepted     |
-| [0002](./adr/0002-delegate-tracking-to-wise-old-man.md) | Delegate player tracking to Wise Old Man      | Accepted     |
-| [0003](./adr/0003-price-history-depth.md)               | Accept the 365-point price history ceiling    | Accepted     |
-| [0004](./adr/0004-reject-osrsbox-db.md)                 | Use the Wiki Bucket API; reject osrsbox-db    | Accepted     |
-| [0005](./adr/0005-rsn-verification-method.md)           | Officer approval for RSN↔Discord linking      | Accepted     |
-| [0006](./adr/0006-hosting-tier-and-scheduled-jobs.md)   | Defer hosting choice; record constraints      | **Deferred** |
-| [0007](./adr/0007-api-first-no-code-redistribution.md)  | API-first; no third-party code redistribution | Accepted     |
-| [0008](./adr/0008-tailwind-v4-css-first-theming.md)     | Tailwind v4 CSS-first token theming           | Accepted     |
-| [0009](./adr/0009-atomic-design-conventions.md)         | Atomic design conventions, enforced by lint   | Accepted     |
-| [0010](./adr/0010-no-discord-bot.md)                    | No Discord bot — OAuth only                   | Accepted     |
-| [0011](./adr/0011-third-party-api-compliance.md)        | Compliant, non-commercial API consumption     | Accepted     |
+| ADR                                                      | Title                                         | Status                 |
+| -------------------------------------------------------- | --------------------------------------------- | ---------------------- |
+| [0000](./adr/0000-template.md)                           | Template                                      | —                      |
+| [0001](./adr/0001-serverless-nextjs-architecture.md)     | Serverless Next.js with managed Postgres      | Accepted               |
+| [0002](./adr/0002-delegate-tracking-to-wise-old-man.md)  | Delegate player tracking to Wise Old Man      | Accepted               |
+| [0003](./adr/0003-price-history-depth.md)                | Accept the 365-point price history ceiling    | Accepted               |
+| [0004](./adr/0004-reject-osrsbox-db.md)                  | Use the Wiki Bucket API; reject osrsbox-db    | Accepted               |
+| [0005](./adr/0005-rsn-verification-method.md)            | Officer approval for RSN↔Discord linking      | ~~Superseded by 0012~~ |
+| [0006](./adr/0006-hosting-tier-and-scheduled-jobs.md)    | Defer hosting choice; record constraints      | **Deferred**           |
+| [0007](./adr/0007-api-first-no-code-redistribution.md)   | API-first; no third-party code redistribution | Accepted               |
+| [0008](./adr/0008-tailwind-v4-css-first-theming.md)      | Tailwind v4 CSS-first token theming           | Accepted               |
+| [0009](./adr/0009-atomic-design-conventions.md)          | Atomic design conventions, enforced by lint   | Accepted               |
+| [0010](./adr/0010-no-discord-bot.md)                     | No Discord bot — OAuth only                   | ~~Superseded by 0012~~ |
+| [0011](./adr/0011-third-party-api-compliance.md)         | Compliant, non-commercial API consumption     | Accepted               |
+| [0012](./adr/0012-no-authentication-public-read-only.md) | **No authentication — public, read-only app** | Accepted               |
 
 **To add one:** copy [`0000-template.md`](./adr/0000-template.md), take the next
 number, and **add a row above in the same commit**. The `write-adr` skill
@@ -48,11 +49,12 @@ never edit history).
 Empirically verified upstream behaviour, recorded because provider docs were
 incomplete or **wrong** in several places. Each states the date verified.
 
-| Doc                                                      | Covers                                             |
-| -------------------------------------------------------- | -------------------------------------------------- |
-| [`osrs-wiki-prices.md`](./api-notes/osrs-wiki-prices.md) | Endpoints, the 365-point cap, mandatory User-Agent |
-| [`osrs-wiki-bucket.md`](./api-notes/osrs-wiki-bucket.md) | Query syntax, verified schemas, field-name traps   |
-| [`jagex-hiscores.md`](./api-notes/jagex-hiscores.md)     | Response shape, missing CORS, coverage gaps        |
+| Doc                                                            | Covers                                             |
+| -------------------------------------------------------------- | -------------------------------------------------- |
+| [`osrs-wiki-prices.md`](./api-notes/osrs-wiki-prices.md)       | Endpoints, the 365-point cap, mandatory User-Agent |
+| [`osrs-wiki-bucket.md`](./api-notes/osrs-wiki-bucket.md)       | Query syntax, verified schemas, field-name traps   |
+| [`jagex-hiscores.md`](./api-notes/jagex-hiscores.md)           | Response shape, missing CORS, coverage gaps        |
+| [`wise-old-man-groups.md`](./api-notes/wise-old-man-groups.md) | Anonymous group reads, `roleOrders`, roster shape  |
 
 ## Evidence discipline
 
