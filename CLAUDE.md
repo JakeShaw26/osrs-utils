@@ -23,6 +23,8 @@ you find yourself reaching for a session, a user, or a permission check — stop
 and re-read ADR-0012.
 
 Full requirements: [`PRD.md`](./PRD.md). Decisions: [`docs/adr/`](./docs/adr/).
+**Resuming after a break?** [`HANDOFF.md`](./HANDOFF.md) has the current
+next-steps plan (Phase A).
 
 ---
 
