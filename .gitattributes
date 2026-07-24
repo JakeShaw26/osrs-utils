@@ -1,0 +1,23 @@
+# Normalise line endings to LF in the repository AND in the working tree.
+#
+# Without this, Git on Windows checks files out as CRLF while Prettier writes
+# LF, so every file looks modified and diffs show whole-file rewrites. That is
+# merely noisy on one branch — across parallel worktrees it turns clean merges
+# into conflicts, because two branches "changed" every line of a file neither
+# actually touched.
+* text=auto eol=lf
+
+# Binary assets: never touched, never diffed as text.
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.webp binary
+*.ico  binary
+*.woff  binary
+*.woff2 binary
+
+# Generated. Collapse in diffs and mark as ours-vs-theirs noise rather than
+# something to review line by line.
+package-lock.json   -diff linguist-generated
+drizzle/meta/**     -diff linguist-generated
