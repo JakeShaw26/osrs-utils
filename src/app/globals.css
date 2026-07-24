@@ -1,0 +1,206 @@
+@import 'tailwindcss';
+
+/* ---------------------------------------------------------------------------
+ * OSRS Clan Toolkit — design tokens
+ *
+ * Tailwind v4 is CSS-first: there is no tailwind.config.ts. Tokens are declared
+ * here and Tailwind generates utilities from them automatically
+ * (--color-surface-raised  ->  bg-surface-raised / text-surface-raised / ...).
+ * Rationale + the deviation from the original brief: docs/adr/0008.
+ *
+ * TWO-LAYER TOKEN SYSTEM — the rule that keeps this consistent over time:
+ *
+ *   Layer 1 (--osrs-*)  raw palette. Never referenced by a component. Ever.
+ *   Layer 2 (semantic)  what a thing MEANS: surface, content, danger, profit.
+ *                       Components use only this layer.
+ *
+ * Components never say "slate" or "amber", only "surface" or "primary". That is
+ * what makes theme changes a one-file edit instead of a repo-wide find/replace,
+ * and it is why light/dark works without a single conditional in a component.
+ * ------------------------------------------------------------------------- */
+
+/* Dark mode is class-based, not media-only, so users can override the OS.
+   The .dark class is set on <html> before paint — see src/lib/theme/theme-script.tsx */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* --- Layer 1: raw palette (never used directly in components) ------------- */
+:root {
+  /* Neutrals — cool slate, chosen to sit behind dense numeric tables without vibrating */
+  --osrs-slate-50: #f6f7f9;
+  --osrs-slate-100: #eceef2;
+  --osrs-slate-200: #d5d9e0;
+  --osrs-slate-300: #b1b8c4;
+  --osrs-slate-400: #7d879a;
+  --osrs-slate-500: #5a6478;
+  --osrs-slate-600: #444d5e;
+  --osrs-slate-700: #333b49;
+  --osrs-slate-800: #232935;
+  --osrs-slate-900: #171c25;
+  --osrs-slate-950: #0e1219;
+
+  /* Brand — amber/gold, the colour OSRS players associate with the game */
+  --osrs-gold-300: #f5d182;
+  --osrs-gold-400: #edb94a;
+  --osrs-gold-500: #d99e21;
+  --osrs-gold-600: #b47c17;
+  --osrs-gold-700: #8a5d12;
+
+  /* Status */
+  --osrs-green-400: #4ade80;
+  --osrs-green-500: #22c55e;
+  --osrs-green-600: #16a34a;
+  --osrs-red-400: #f87171;
+  --osrs-red-500: #ef4444;
+  --osrs-red-600: #dc2626;
+  --osrs-amber-400: #fbbf24;
+  --osrs-amber-500: #f59e0b;
+  --osrs-blue-400: #60a5fa;
+  --osrs-blue-500: #3b82f6;
+}
+
+/* --- Layer 2: semantic tokens, light theme ------------------------------- */
+:root {
+  --surface: var(--osrs-slate-50);
+  --surface-raised: #ffffff;
+  --surface-sunken: var(--osrs-slate-100);
+  --surface-overlay: #ffffff;
+  --surface-hover: var(--osrs-slate-100);
+
+  --content: var(--osrs-slate-900);
+  --content-muted: var(--osrs-slate-500);
+  --content-subtle: var(--osrs-slate-400);
+  --content-inverse: var(--osrs-slate-50);
+
+  --border: var(--osrs-slate-200);
+  --border-strong: var(--osrs-slate-300);
+
+  --primary: var(--osrs-gold-600);
+  --primary-hover: var(--osrs-gold-700);
+  --primary-content: #ffffff;
+
+  --success: var(--osrs-green-600);
+  --danger: var(--osrs-red-600);
+  --warning: var(--osrs-amber-500);
+  --info: var(--osrs-blue-500);
+
+  /* Domain tokens. Deliberately NOT aliases of success/danger: a falling item
+     price is not an error, and a rising one is not a success. Keeping them
+     separate means we can restyle "loss" without touching validation states. */
+  --profit: var(--osrs-green-600);
+  --loss: var(--osrs-red-600);
+  --members: var(--osrs-gold-600);
+
+  color-scheme: light;
+}
+
+/* --- Layer 2: semantic tokens, dark theme -------------------------------- */
+.dark {
+  --surface: var(--osrs-slate-950);
+  --surface-raised: var(--osrs-slate-900);
+  --surface-sunken: #0a0d13;
+  --surface-overlay: var(--osrs-slate-800);
+  --surface-hover: var(--osrs-slate-800);
+
+  --content: var(--osrs-slate-100);
+  --content-muted: var(--osrs-slate-400);
+  --content-subtle: var(--osrs-slate-500);
+  --content-inverse: var(--osrs-slate-950);
+
+  --border: var(--osrs-slate-800);
+  --border-strong: var(--osrs-slate-700);
+
+  --primary: var(--osrs-gold-400);
+  --primary-hover: var(--osrs-gold-300);
+  --primary-content: var(--osrs-slate-950);
+
+  /* Lighter status variants: mid-tone greens/reds fail contrast on dark surfaces */
+  --success: var(--osrs-green-400);
+  --danger: var(--osrs-red-400);
+  --warning: var(--osrs-amber-400);
+  --info: var(--osrs-blue-400);
+
+  --profit: var(--osrs-green-400);
+  --loss: var(--osrs-red-400);
+  --members: var(--osrs-gold-400);
+
+  color-scheme: dark;
+}
+
+/* --- Expose semantic tokens to Tailwind ---------------------------------- */
+/* `inline` is required so Tailwind emits var() references rather than resolving
+   values at build time — that is what lets .dark re-point them at runtime. */
+@theme inline {
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-sunken: var(--surface-sunken);
+  --color-surface-overlay: var(--surface-overlay);
+  --color-surface-hover: var(--surface-hover);
+
+  --color-content: var(--content);
+  --color-content-muted: var(--content-muted);
+  --color-content-subtle: var(--content-subtle);
+  --color-content-inverse: var(--content-inverse);
+
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-content: var(--primary-content);
+
+  --color-success: var(--success);
+  --color-danger: var(--danger);
+  --color-warning: var(--warning);
+  --color-info: var(--info);
+
+  --color-profit: var(--profit);
+  --color-loss: var(--loss);
+  --color-members: var(--members);
+
+  /* Typography. Mono is load-bearing here: GP values, XP counts and DPS figures
+     are compared vertically in tables, so digits must be fixed-width. */
+  --font-sans:
+    var(--font-inter), ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, monospace;
+
+  --text-2xs: 0.6875rem;
+
+  /* Radii — one step up from Tailwind's defaults; the dense data UI reads
+     better with slightly softer corners on cards. */
+  --radius-card: 0.75rem;
+  --radius-control: 0.5rem;
+
+  /* Elevation. Dark themes read depth from borders more than shadows, so these
+     stay subtle; see docs/theming.md. */
+  --shadow-card: 0 1px 2px 0 rgb(0 0 0 / 0.06), 0 1px 3px 0 rgb(0 0 0 / 0.1);
+  --shadow-overlay: 0 10px 30px -10px rgb(0 0 0 / 0.35);
+}
+
+/* --- Base ---------------------------------------------------------------- */
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  body {
+    background-color: var(--color-surface);
+    color: var(--color-content);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Always-visible focus ring. Removing outlines without a replacement is the
+     single most common keyboard-accessibility regression. */
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+}
+
+@layer utilities {
+  /* Tabular figures for any changing number, so values don't jitter as they update. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+    font-family: var(--font-mono);
+  }
+}

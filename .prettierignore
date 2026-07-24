@@ -1,0 +1,8 @@
+# Generated artifacts — formatting these creates noise in diffs and they are
+# rewritten by their tooling anyway.
+drizzle/meta/
+drizzle/*.sql
+.next/
+node_modules/
+*.lock
+package-lock.json
