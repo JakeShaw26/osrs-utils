@@ -1,7 +1,10 @@
 # OSRS Wiki Bucket API (static game data)
 
 **Base:** `https://oldschool.runescape.wiki/api.php?action=bucket`
-**Verified:** 2026-07-24 — queried live.
+**Verified:** 2026-07-24, extended 2026-07-26 — queried live both times.
+
+Client: [`src/lib/api/wiki-bucket.ts`](../../src/lib/api/wiki-bucket.ts). Build
+queries with `buildBucketQuery()` — never string-concatenate one (see escaping).
 
 Bucket is the Wiki's semantic data layer. It **replaces the deprecated Semantic
 MediaWiki `action=ask`** endpoint.
@@ -70,10 +73,74 @@ third-party monster database:
 `burn_immune`, `thrall_immune`, `attribute`, `experience_bonus`,
 `is_members_only`, `release_date`, `version_anchor`, `default_version`
 
+## ⚠️ The `query` parameter is a program, not a filter string
+
+Verified 2026-07-26. Sending `Verac's flail` unescaped returns:
+
+```json
+{ "error": "')' expected near 's'." }
+```
+
+That is a **parser** error (Lua-shaped), which means an interpolated value is an
+**injection surface**, not a formatting nuisance — and apostrophes are
+unavoidable in OSRS item names.
+
+Verified escaping behaviour:
+
+| Input             | Result                                             |
+| ----------------- | -------------------------------------------------- |
+| `'` raw           | Parse error — literal terminates early             |
+| `\'`              | ✅ Accepted, yields a literal apostrophe           |
+| `\\`              | ✅ Accepted, yields a literal backslash            |
+| `"…"` for a value | ✅ Accepted — double quotes work as an alternative |
+| newline in value  | Parse error — `unfinished string near ''a'`        |
+
+**Escape backslash first, then the quote.** Handling only `'` lets a value
+ending in `\` escape our own closing quote and run on into the expression.
+`escapeLiteral()` does this and is unit-tested for exactly that case; control
+characters are rejected rather than escaped.
+
+## ⚠️ A bad query returns HTTP 200
+
+Errors arrive as `{"error": "…"}` with a 200 status, so a status check does not
+catch them and a typo'd field name looks like an empty result set.
+`runBucketQuery()` checks the field explicitly.
+
+## `page_name` — the undocumented join key
+
+Every bucket carries `page_name` (the source wiki page); it appears in no
+published schema. It is the **only** key linking buckets — `infobox_bonuses` has
+no item-name field at all, so equipment stats reach their item solely through it.
+
+## Buckets that exist (V9, resolved 2026-07-26)
+
+| Bucket                          | Exists | Notes                                                          |
+| ------------------------------- | ------ | -------------------------------------------------------------- |
+| `infobox_item`                  | ✅     | Item metadata                                                  |
+| `infobox_monster`               | ✅     | 55 fields; enough for a full DPS calculator                    |
+| `infobox_bonuses`               | ✅     | **Equipment stats** — full attack/defence bonuses              |
+| `quest`                         | ✅     | Prose fields only, no `name` — keyed by `page_name`            |
+| `drops` / `drop` / `item_drops` | ❌     | Not found under any obvious name. Drop tables remain unsourced |
+
+**`infobox_bonuses` (18 fields):** `stab/slash/crush/range/magic_attack_bonus`,
+`stab/slash/crush/range/magic_defence_bonus`, `strength_bonus`,
+`ranged_strength_bonus`, `prayer_bonus`, `magic_damage_bonus` (DOUBLE),
+`equipment_slot`, `weapon_attack_speed`, `weapon_attack_range`, `combat_style`.
+
+**`quest` (9 fields):** `description`, `enemies_to_defeat`, `ironman_concerns`,
+`items_required`, `official_difficulty`, `official_length`, `requirements`,
+`start_point`, `json`.
+
+⚠️ Quest fields are **wiki prose, not structured data** — `requirements` is a
+human sentence. A quest planner needing "level 40 Mining" as a number has to
+parse it, and that parsing is a feature's problem, not the client's.
+
 ## Gotchas
 
 1. **`item_id` is `repeated`** — returns an **array**, not a scalar, because of
-   item variants. Handle accordingly.
+   item variants. Handle accordingly. So is **`max_hit`** (`["41"]`) and
+   `hitpoints`, while `combat_level` is a plain number — which fields are
+   repeated is **not predictable from meaning**. Unwrap with `firstValue()`.
 2. **Multi-version pages** (Zulrah's forms, item variants) use `version_anchor`
    and `default_version`. Naive queries return duplicate rows; filter on
    `default_version` unless you specifically want all variants.
@@ -91,6 +158,6 @@ and changes only on weekly game updates. See
 
 ## Not yet verified
 
-Whether buckets exist for **quests**, **equipment stats** (separate from
-`infobox_item`) and **drop tables**. Introspect before designing features that
-assume them (PRD V9).
+**Drop tables.** No bucket found under `drops`, `drop` or `item_drops`. Drop
+data may live in wikitext templates rather than Bucket, which would mean parsing
+pages — worth weighing against skipping the feature (PRD V9, remaining part).

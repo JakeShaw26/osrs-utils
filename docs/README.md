@@ -35,6 +35,7 @@ valuable part.
 | [0010](./adr/0010-no-discord-bot.md)                     | No Discord bot — OAuth only                   | ~~Superseded by 0012~~ |
 | [0011](./adr/0011-third-party-api-compliance.md)         | Compliant, non-commercial API consumption     | Accepted               |
 | [0012](./adr/0012-no-authentication-public-read-only.md) | **No authentication — public, read-only app** | Accepted               |
+| [0013](./adr/0013-rate-limiting-shared-store.md)         | Rate limiting by hashed IP in shared Postgres | Accepted               |
 
 **To add one:** copy [`0000-template.md`](./adr/0000-template.md), take the next
 number, and **add a row above in the same commit**. The `write-adr` skill
