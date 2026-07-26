@@ -13,7 +13,11 @@ const eslintConfig = [
   ...nextTypeScript,
 
   {
-    ignores: ['.next/**', 'node_modules/**', 'drizzle/**'],
+    // `.claude/worktrees` holds full checkouts, each with its own node_modules.
+    // The `node_modules/**` pattern above is cwd-relative and does not match a
+    // nested copy, so without this line lint walks every dependency in every
+    // agent worktree — tens of thousands of problems from code we do not own.
+    ignores: ['.next/**', 'node_modules/**', 'drizzle/**', '.claude/worktrees/**'],
   },
 
   /* --- Atomic design: a layer may only import from layers below it --------- */

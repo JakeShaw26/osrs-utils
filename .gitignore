@@ -30,3 +30,8 @@ yarn-error.log*
 
 # testing
 /coverage
+
+# Agent worktrees — full repo checkouts (~550MB each) created by parallel
+# feature agents. Their branches live on the remote; the directories are
+# disposable and must never be committed.
+.claude/worktrees/

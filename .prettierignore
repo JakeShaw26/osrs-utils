@@ -4,5 +4,8 @@ drizzle/meta/
 drizzle/*.sql
 .next/
 node_modules/
+
+# Agent worktrees — full checkouts with their own node_modules. Not our code.
+.claude/worktrees/
 *.lock
 package-lock.json
