@@ -1,0 +1,56 @@
+# Local development database.
+#
+# This file is for LOCAL DEVELOPMENT ONLY. It is not a deployment artifact and
+# nothing here should be copied to a server as-is — see the notes below.
+#
+# Usage:
+#   npm run db:up      start Postgres in the background
+#   npm run db:migrate apply migrations
+#   npm run db:down    stop it (data survives)
+#   npm run db:reset   stop it and DELETE the data volume
+
+services:
+  postgres:
+    # Pinned to a patch version, not `:17` or `:latest`. A floating tag means
+    # the database silently changes version under you on some future `pull`,
+    # and "it worked yesterday" becomes a version difference you cannot see in
+    # the diff. Alpine keeps the image ~80MB rather than ~450MB.
+    image: postgres:17.2-alpine@sha256:7e5df973a74872482e320dcbdeb055e178d6f42de0558b083892c50cda833c96
+    container_name: osrs-postgres
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_USER: osrs
+      # Local-only credential. It is committed deliberately: it protects nothing
+      # (the port is bound to loopback), and a fake "secret" in a compose file
+      # teaches the habit of committing real ones. Anything that must stay
+      # secret belongs in .env.local, which is gitignored.
+      POSTGRES_PASSWORD: localdev
+      POSTGRES_DB: osrs
+
+    # 127.0.0.1 prefix matters. Plain "5432:5432" binds to 0.0.0.0 — every
+    # interface — so the database is reachable from anywhere that can route to
+    # this machine, including other devices on a coffee-shop wifi. Docker also
+    # writes its own iptables rules on Linux, which routinely bypass a host
+    # firewall. Binding to loopback means only this machine can connect.
+    ports:
+      - '127.0.0.1:5432:5432'
+
+    # A named volume, not a bind mount. Postgres needs Unix ownership semantics
+    # that a Windows bind mount does not provide, and initdb fails on one.
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+    # Without this, `docker compose up -d` reports "started" the moment the
+    # process launches — but Postgres takes a few seconds more to accept
+    # connections, so an immediate `db:migrate` fails with a connection error
+    # that looks like a config problem and is actually a race.
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U osrs -d osrs']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+volumes:
+  pgdata:
