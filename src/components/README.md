@@ -91,4 +91,12 @@ a second near-identical input is how a token system quietly stops being one.
 2. Use tokens, never raw values.
 3. Server component unless it needs state, effects or event handlers.
 4. Keep logic in `lib/`, presentation in the component.
-5. Run `npm run check` — layering violations fail the lint step.
+5. Write a `.test.tsx` beside it — see [`docs/testing.md`](../../docs/testing.md).
+6. Run `npm run check` — layering violations fail the lint step.
+
+## Testing components
+
+Component tests are `.test.tsx` and run under jsdom; logic tests are `.test.ts`
+and run under node. Query by role and accessible name, never by class or test
+id. Full guidance and the reasoning behind what is and is not worth asserting:
+[`docs/testing.md`](../../docs/testing.md). Reference: [`atoms/Button.test.tsx`](./atoms/Button.test.tsx).
