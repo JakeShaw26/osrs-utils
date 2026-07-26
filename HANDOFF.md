@@ -165,8 +165,9 @@ Resolved: V1, V11, V14, and most of V9. Moot: V11a, V4 (no auth, no RSN links).
    `enforceRateLimit()` against the real store. Until then it fails open on
    every request — which is safe, but it is not rate limiting.
 2. **`.env.local` is currently empty (0 bytes).** Nothing can run against real
-   data until it is filled from `.env.example`. `RATE_LIMIT_TRUSTED_PROXY_HOPS`
-   is optional and defaults to 1.
+   data until it is filled in. **[`docs/environment.md`](./docs/environment.md)**
+   walks through where each value comes from; only four are required, and one of
+   those (`WOM_GROUP_ID`) is already correct in the template.
 3. **Pin CI actions to commit SHAs** rather than `@v4`. A mutable tag can be
    repointed at malicious code; this is a real supply-chain vector. Noted
    inline in `.github/workflows/ci.yml`. _(Carried over — still not done.)_

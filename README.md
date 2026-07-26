@@ -18,9 +18,11 @@ cp .env.example .env.local   # then fill it in
 npm run dev
 ```
 
-`.env.local` needs a Wise Old Man group ID, a Postgres URL and a User-Agent
-string — [`src/lib/env.ts`](./src/lib/env.ts) validates on first use and fails
-loudly, naming the variable, rather than 500-ing later.
+`.env.local` needs a Wise Old Man group ID, a Postgres URL, a generated
+`CRON_SECRET` and a User-Agent string. **[`docs/environment.md`](./docs/environment.md)
+explains where each value comes from** and how to verify it.
+[`src/lib/env.ts`](./src/lib/env.ts) validates on first use and fails loudly,
+naming the variable, rather than 500-ing later.
 
 ### Database
 
@@ -46,6 +48,7 @@ hosts — those are correctness rules, not style preferences.
 | [`PRD.md`](./PRD.md)                                     | Requirements, feature catalog, per-feature data source investigation |
 | [`CLAUDE.md`](./CLAUDE.md)                               | Living context: current state, hard rules, open questions            |
 | [`docs/README.md`](./docs/README.md)                     | Documentation index                                                  |
+| [`docs/environment.md`](./docs/environment.md)           | Every `.env.local` value, where to get it, and how to verify it      |
 | [`docs/adr/`](./docs/adr/)                               | Architecture Decision Records                                        |
 | [`docs/theming.md`](./docs/theming.md)                   | Design tokens and dark mode                                          |
 | [`docs/api-notes/`](./docs/api-notes/)                   | Verified upstream API behaviour                                      |

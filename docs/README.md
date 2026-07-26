@@ -10,6 +10,7 @@ not written up at the end.
 | [`/PRD.md`](../PRD.md)                                       | Product requirements, feature catalog, per-feature data source investigation                 |
 | [`/CLAUDE.md`](../CLAUDE.md)                                 | **Living context** — loaded into every AI session. Current state, hard rules, open questions |
 | [`api-terms.md`](./api-terms.md)                             | **Binding** third-party API terms and our compliance rules                                   |
+| [`environment.md`](./environment.md)                         | Every `.env.local` value — where to get it, why it exists, how to verify it                  |
 | [`theming.md`](./theming.md)                                 | Design tokens, dark mode, do/don't                                                           |
 | [`../src/components/README.md`](../src/components/README.md) | Atomic design, defined for this app                                                          |
 
