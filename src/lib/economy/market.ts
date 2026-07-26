@@ -28,6 +28,18 @@ import { NATURE_RUNE_ITEM_ID } from './alch';
  * request path, that stops being true. The one endpoint with that shape is
  * `/timeseries`; see `loadItemHistory` for how it is bounded.
  *
+ * ⚠️ **Line 2 is not automatic — it is a property of the CALLING PAGE.** The
+ * TTLs `osrsFetch` sets are only honoured if the page keeps its data cache.
+ * Every economy page therefore declares `fetchCache = 'default-cache'`, and a
+ * page that instead declares `dynamic = 'force-dynamic'` silently overrides all
+ * of them (it is documented as equivalent to `fetchCache = 'force-no-store'`,
+ * which re-fetches "even if they provide a 'force-cache' option"). Everything
+ * above this line was written as fact while that was exactly what shipped, so
+ * the paragraph read as a guarantee while the feature was an open proxy. If you
+ * add an economy page, the caching declaration is the thing to get right —
+ * lint blocks the specific mistake we made, not every way to make it.
+ * See ADR-0014.
+ *
  * `server-only`: importing this from a client component is a build error, which
  * is the guarantee that a 850 KB mapping never ships to a browser.
  */
