@@ -1,8 +1,8 @@
 # ADR-0014: Economy reads only bulk price feeds, and renders on the server
 
-- **Status:** Accepted
+- **Status:** Accepted — **amended 2026-07-26, see [Correction](#correction-force-dynamic-disabled-the-very-cache-this-adr-relies-on)**
 - **Date:** 2026-07-26
-- **Deciders:** Economy feature agent (Phase B)
+- **Deciders:** Economy feature agent (Phase B); amended at merge review
 - **Relates to:** [ADR-0013](./0013-rate-limiting-shared-store.md) (rate limiting),
   [ADR-0012](./0012-no-authentication-public-read-only.md) (no auth),
   [ADR-0003](./0003-price-history-depth.md) (price history depth),
@@ -10,6 +10,59 @@
 
 **This ADR also records the answer to open question V3** (GE tax rate, cap and
 exemptions) — see the final section.
+
+## Correction: `force-dynamic` disabled the very cache this ADR relies on
+
+**The original version of this ADR was wrong in a way that mattered, and the
+error is recorded here rather than edited away, because the shape of it is more
+instructive than the fix.**
+
+The argument for omitting `enforceRateLimit()` (below) rests on the shared
+response cache being the stronger defence. That argument is sound. But the
+implementation shipped with `export const dynamic = 'force-dynamic'` on all four
+Economy pages, and the Next.js docs state that `force-dynamic` is equivalent to:
+
+> Setting the option of every `fetch()` request in a layout or page to
+> `{ cache: 'no-store', next: { revalidate: 0 } }` … Setting the segment config
+> to `export const fetchCache = 'force-no-store'`
+
+and that `force-no-store`:
+
+> forces all `fetch` requests to be re-fetched every request **even if they
+> provide a `'force-cache'` option**
+
+So `force-dynamic` silently overrode every TTL `osrsFetch` sets. There was no
+shared cache. Each page load re-fetched roughly a megabyte from the Wiki, with
+no rate limiter — **the exact open-proxy exposure this ADR was written to
+prevent** (PRD §5.3, hard rule #4). Nothing was deployed, so there was no live
+incident; the defect was caught reviewing the build output at merge.
+
+**Why it survived review:** `force-dynamic` was reached for to solve a real and
+unrelated problem — keeping `getEnv()` out of `next build`, which CI runs
+without secrets (hard rule #2). It does solve that. Its effect on fetch caching
+is a second, undocumented-at-the-call-site consequence, and the source comments
+next to it asserted the opposite in good faith: _"the `osrsFetch` data cache
+still shares every upstream fetch across all requests."_ Confident prose next to
+a wrong mechanism is harder to catch than no prose at all.
+
+**The fix**, applied across all four pages:
+
+- `export const fetchCache = 'default-cache'` — honours the explicit
+  `next: { revalidate }` that `osrsFetch` already sets, including for fetches
+  discovered after a request-time API (which the default `'auto'` would not
+  cache).
+- `await connection()` on `/economy/high-alch` only — the one page reading no
+  `searchParams`, so nothing else keeps it out of the build. It defers rendering
+  to a real request **without touching fetch caching**, which is precisely the
+  distinction `force-dynamic` fails to make.
+- A lint rule (`eslint.config.mjs`) rejects `dynamic = 'force-dynamic'` in any
+  `page.tsx`/`layout.tsx`, naming the replacement. Route handlers stay exempt —
+  they are request-scoped by nature and `/api/health` must never be cached.
+
+**The generalisable lesson:** in this codebase the render mode and the data
+cache are not independent, and the page controls both. Any future page proxying
+an upstream must state its caching intent explicitly; "it's a Server Component
+so it's cached" is not true and was never true.
 
 ## Context
 
@@ -72,10 +125,13 @@ Concretely:
    without reaching the Wiki; `range` resolves to one of exactly four timesteps,
    so no caller-supplied string reaches the upstream; and `osrsFetch` caches per
    (item, range).
-6. **Economy pages are `dynamic = 'force-dynamic'`.** Prices change every
-   minute, so a build-time snapshot would be stale on arrival — and
-   prerendering would call `getEnv()` during `next build`, where CI
-   deliberately has no secrets.
+6. **Economy pages declare `fetchCache = 'default-cache'`, never
+   `dynamic = 'force-dynamic'`.** Prices change every minute, so a build-time
+   snapshot would be stale on arrival, and prerendering would call `getEnv()`
+   during `next build` where CI deliberately has no secrets. Those goals are met
+   by request-time rendering (`searchParams`, or `connection()` where there is
+   no other request-time API) — **not** by opting out of the data cache, which
+   is what `force-dynamic` actually does. See [Correction](#correction-force-dynamic-disabled-the-very-cache-this-adr-relies-on).
 7. **No `enforceRateLimit()` in this feature.** See below.
 
 ### Why the limiter is deliberately absent
@@ -83,17 +139,32 @@ Concretely:
 This is the part most likely to be questioned in review, so it is recorded
 explicitly.
 
-`enforceRateLimit()` needs request headers. Reading headers in an App Router
-page opts that route out of static and cached rendering. For every page here
-except the item-history fetch, the shared response cache **is** the protection —
-so adding the limiter would trade away line 2 of ADR-0013's defence in order to
-buy line 3, which the same ADR describes as the weakest of the three. The result
-would be a page that is easier to abuse, not harder.
+**The original reasoning here was that reading request headers would opt these
+pages out of cached rendering, so adding the limiter would trade line 2 of
+ADR-0013's defence for line 3. That reasoning does not hold** — these pages read
+`searchParams` and are rendered per request regardless, so there is no render
+caching for the limiter to cost. It was also self-defeating as written, since
+the `force-dynamic` it justified had already destroyed the cache it claimed to
+protect.
 
-The limiter remains the right tool for a route whose upstream cost genuinely
-varies per caller. This feature does not have one. **If anyone later adds an
-Economy API route that proxies on request, that route needs
-`enforceRateLimit()` and this ADR does not exempt it.**
+The decision stands, on the argument that actually applies:
+
+**Upstream cost here does not vary with the caller.** Every Economy page reads
+the same three bulk feeds, cached by TTL (decision 1 and 6 above). Whether one
+visitor loads a page or ten thousand requests arrive, the Wiki sees the same
+handful of requests per TTL. A rate limiter caps _inbound_ requests to us; it is
+the right tool when inbound volume translates into outbound volume. Here it does
+not, so the limiter would add per-request database writes and a failure mode
+(`degraded: true` when the store is down) while protecting an upstream that is
+already insulated. Our own render cost is a separate concern, better handled by
+an edge cache or platform limits than by a Postgres counter.
+
+Two conditions would reverse this, and both should be treated as review
+triggers: **(a)** any Economy route whose upstream cost varies per caller —
+notably a new per-item proxy; **(b)** deployment somewhere without an edge cache
+in front, where inbound volume becomes a cost problem even with upstream
+insulated. **If anyone later adds an Economy API route that proxies on request,
+that route needs `enforceRateLimit()` and this ADR does not exempt it.**
 
 ## Consequences
 
@@ -117,9 +188,10 @@ Economy API route that proxies on request, that route needs
   would also mean shipping ~850 KB of item JSON to every visitor, which is worse
   on every axis except perceived latency for the second keystroke onward.
 - **Range switching is a page navigation**, not an instant redraw.
-- **`force-dynamic` means every request re-renders.** The server re-runs a
-  linear search over 4,591 items per query. At ≤50 DAU this is irrelevant; at
-  internet scale it would not be.
+- **Every request re-renders.** These pages are request-time by construction, so
+  the server re-runs a linear search over 4,591 items per query. At ≤50 DAU this
+  is irrelevant; at internet scale it would not be. Note this is a cost in _our_
+  compute only — upstream traffic stays bounded by TTL.
 - **The chart's hover layer is native `<title>` tooltips**, which are
   browser-styled and appear after a delay. A custom crosshair would read better
   but requires client JS on every item page.

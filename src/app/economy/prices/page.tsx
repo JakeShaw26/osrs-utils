@@ -25,11 +25,19 @@ export const metadata: Metadata = {
  */
 
 /**
- * Live prices, never a build-time snapshot. Also keeps `next build` from
- * calling `getEnv()` in CI, which runs without secrets deliberately. The
- * `osrsFetch` data cache still shares every upstream fetch across all requests.
+ * Reading `searchParams` already makes this render per request, so the page is
+ * never a build-time snapshot and `getEnv()` is never called during
+ * `next build`. What it does NOT do is keep the data cache: under the default
+ * `fetchCache: 'auto'`, fetches discovered after a request-time API go
+ * uncached. `'default-cache'` honours the explicit `next: { revalidate }` that
+ * `osrsFetch` sets, so the three bulk feeds are one shared upstream request per
+ * TTL rather than one per visitor.
+ *
+ * This replaced `dynamic = 'force-dynamic'`, which is documented as equivalent
+ * to `fetchCache = 'force-no-store'` and therefore overrode every TTL in
+ * `osrsFetch`, re-fetching ~1MB from the Wiki on every page load. See ADR-0014.
  */
-export const dynamic = 'force-dynamic';
+export const fetchCache = 'default-cache';
 
 /** How many search hits to show. Beyond this the list stops being useful. */
 const SEARCH_RESULT_LIMIT = 40;

@@ -25,17 +25,24 @@ import { resolveRange } from '@/lib/economy/price-ranges';
  *    the response is cached per (item, range) by `osrsFetch`, so the worst case
  *    is bounded by the real item catalogue rather than by request volume.
  *
- *    Deliberately NOT rate limited. `enforceRateLimit()` needs request headers,
- *    which would opt this page out of static rendering and destroy the shared
- *    cache that is the stronger defence. Trading line 2 of ADR-0013 for line 3
- *    would make this worse, not better. Full reasoning in ADR-0014.
+ *    Deliberately NOT rate limited — but not for the reason first recorded
+ *    here. This page reads `searchParams` and is rendered per request either
+ *    way, so `enforceRateLimit()` would cost no render caching at all. The
+ *    actual defence is the `fetchCache` line below: upstream volume is bounded
+ *    by TTL rather than by request volume, which is line 2 of ADR-0013 doing
+ *    its job. Revisit if this is ever deployed somewhere without an edge cache.
+ *    Full reasoning in ADR-0014.
  */
 
 /**
- * Live prices, never a build-time snapshot. Also keeps `next build` from
- * calling `getEnv()` in CI, which runs without secrets deliberately.
+ * A dynamic segment with no `generateStaticParams` is already rendered on
+ * demand, so nothing here is prerendered and `getEnv()` never runs during
+ * `next build`. `fetchCache` is what preserves the shared data cache — the
+ * per-(item, range) timeseries entries and the bulk feeds alike. Replaced
+ * `dynamic = 'force-dynamic'`, which forced all of them to `no-store`.
+ * See ADR-0014.
  */
-export const dynamic = 'force-dynamic';
+export const fetchCache = 'default-cache';
 
 interface PageProps {
   params: Promise<{ id: string }>;

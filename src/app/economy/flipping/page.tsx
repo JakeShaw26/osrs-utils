@@ -28,10 +28,12 @@ export const metadata: Metadata = {
  */
 
 /**
- * Live prices, never a build-time snapshot. Also keeps `next build` from
- * calling `getEnv()` in CI, which runs without secrets deliberately.
+ * Reading `searchParams` already makes this render per request; `fetchCache`
+ * keeps the shared data cache that a request-time API would otherwise drop.
+ * Replaced `dynamic = 'force-dynamic'`, which silently forced every
+ * `osrsFetch` call to `no-store`. See ADR-0014.
  */
-export const dynamic = 'force-dynamic';
+export const fetchCache = 'default-cache';
 
 export default async function FlippingPage({
   searchParams,

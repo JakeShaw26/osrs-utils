@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { connection } from 'next/server';
 import Link from 'next/link';
 import { StatTile } from '@/components/atoms/economy/StatTile';
 import { AlchProfitTable } from '@/components/organisms/economy/AlchProfitTable';
@@ -28,23 +29,35 @@ export const metadata: Metadata = {
  */
 
 /**
- * Never prerender this at build time.
+ * Keep every `fetch` on its own caching terms.
  *
- * Two reasons, and the second is the one that bites. First, prices change every
- * minute, so a build-time snapshot is stale before the deploy finishes. Second,
- * prerendering runs `getEnv()` during `next build`, where secrets legitimately
- * do not exist — CI builds without them on purpose, and this page has no
- * dynamic params to opt itself out. Without this line the build fails.
+ * `osrsFetch` sets an explicit `next: { revalidate }` per source. Under the
+ * default `fetchCache: 'auto'`, a fetch discovered *after* a request-time API
+ * is not cached — so state the intent rather than depend on statement order.
+ * `'default-cache'` honours the option each fetch provides, which is what makes
+ * the three bulk feeds one shared upstream request per TTL instead of one per
+ * visitor.
  *
- * This does NOT weaken the upstream protection: `osrsFetch`'s data cache is
- * independent of the render mode, so the three bulk feeds are still fetched
- * once per TTL and shared by every request.
+ * This replaced `dynamic = 'force-dynamic'`, which was actively harmful here:
+ * it is documented as equivalent to `fetchCache = 'force-no-store'`, and that
+ * "forces all fetch requests to be re-fetched every request even if they
+ * provide a 'force-cache' option" — silently overriding every TTL in
+ * `osrsFetch` and turning this page into an open proxy to the Wiki. See
+ * ADR-0014.
  */
-export const dynamic = 'force-dynamic';
+export const fetchCache = 'default-cache';
 
 const RESULT_LIMIT = 40;
 
 export default async function HighAlchPage() {
+  // Unlike the other economy pages this one reads no searchParams, so nothing
+  // else marks it as request-time and Next would prerender it during
+  // `next build` — where `getEnv()` legitimately throws, because CI builds
+  // without secrets on purpose (hard rule #2). `connection()` defers the render
+  // to a real request without touching fetch caching, which is exactly the
+  // distinction `force-dynamic` failed to make.
+  await connection();
+
   const snapshot = await loadMarketSnapshot();
 
   const candidates = marketRowsFor(snapshot, snapshot.mapping).filter(
