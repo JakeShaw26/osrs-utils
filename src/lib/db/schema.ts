@@ -3,9 +3,12 @@ import {
   text,
   timestamp,
   bigint,
+  integer,
   jsonb,
   uuid,
   date,
+  index,
+  primaryKey,
   uniqueIndex,
 } from 'drizzle-orm/pg-core';
 
@@ -29,9 +32,13 @@ import {
  * What is left is not user data at all. Neither table is keyed by a person —
  * only by RSN and by job name — so neither depended on auth to be meaningful.
  *
- * SECURITY (ADR-0012): nothing here may be written in response to an anonymous
- * request. The only writers are `CRON_SECRET`-authenticated scheduled jobs. A
- * route handler that mutates these tables for a public caller is a defect.
+ * SECURITY (ADR-0012): no *application* state here may be written in response to
+ * an anonymous request. The only writers are `CRON_SECRET`-authenticated
+ * scheduled jobs. A route handler that mutates `daily_snapshots` for a public
+ * caller is a defect.
+ *
+ * `rate_limit_counters` is the one deliberate exception, and the exception is
+ * narrow enough to state precisely: see ADR-0013 and the comment on the table.
  */
 
 /**
@@ -70,3 +77,42 @@ export const jobState = pgTable('job_state', {
   lastCompletedPassAt: timestamp('last_completed_pass_at', { withTimezone: true }),
   lastError: text('last_error'),
 });
+
+/**
+ * Fixed-window rate-limit counters. The one table an anonymous request writes.
+ *
+ * WHY THIS DOESN'T BREAK HARD RULE #5 (ADR-0013)
+ *
+ * Rule #5 bans a public caller mutating *application* state. This is not
+ * application state — it is a counter, and the exception is bounded in every
+ * direction that matters:
+ *
+ *   - The caller supplies no content. Both key columns are derived server-side;
+ *     `bucket_key` is a SHA-256 digest and `window_start` is a quantised clock
+ *     reading. There is no field an attacker can choose the bytes of.
+ *   - It is write-only-by-increment. The single statement that touches it adds
+ *     one to an integer; nothing here is ever read back into a page.
+ *   - Deleting the whole table costs nothing but a brief loss of limiting.
+ *
+ * PRIVACY: `bucket_key` is a salted hash, never a raw IP. An IP address is
+ * personal data, and IPv4 is small enough (2^32) to brute-force from an
+ * unsalted digest — so a database dump must not become a visitor log.
+ *
+ * The composite primary key is load-bearing: it is the ON CONFLICT target that
+ * makes "increment or create" a single atomic statement rather than a
+ * read-then-write race between concurrent serverless invocations.
+ */
+export const rateLimitCounters = pgTable(
+  'rate_limit_counters',
+  {
+    bucketKey: text('bucket_key').notNull(),
+    windowStart: timestamp('window_start', { withTimezone: true }).notNull(),
+    hits: integer('hits').notNull().default(0),
+    /** Drives pruning. Rows are dead weight the moment their window closes. */
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.bucketKey, t.windowStart] }),
+    index('rate_limit_counters_expires_at').on(t.expiresAt),
+  ],
+);

@@ -47,6 +47,12 @@ const serverSchema = z.object({
   // Optional: raises the Wise Old Man rate limit from 20 to 100 req/min.
   WOM_API_KEY: z.string().optional(),
 
+  // How many reverse proxies append to X-Forwarded-For in front of us. One is
+  // correct for every serverless host we are considering. Raising it past the
+  // real topology reads attacker-controlled text as the client IP and silently
+  // disables rate limiting — see src/lib/ratelimit/identity.ts. (ADR-0013)
+  RATE_LIMIT_TRUSTED_PROXY_HOPS: z.coerce.number().int().positive().default(1),
+
   // Sent on every outbound OSRS Wiki request. The wiki blocks generic agents
   // and asks for contact info. Not optional in practice. (PRD §2.1)
   OSRS_API_USER_AGENT: z

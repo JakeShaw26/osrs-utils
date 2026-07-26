@@ -65,6 +65,26 @@ These are enforced by ESLint (`eslint.config.mjs`), not just documented.
    bundle. `ThemeToggle` is the worked example — the page rendering it stays a
    server component.
 
+## What already exists — check here before writing one
+
+Shared primitives, built in Phase A specifically so parallel feature work does
+not produce five slightly different inputs.
+
+| Component                                       | Layer    | Notes                                                                       |
+| ----------------------------------------------- | -------- | --------------------------------------------------------------------------- |
+| `Button`                                        | Atom     | `primary` / `secondary` / `ghost`                                           |
+| `Input`                                         | Atom     | `numeric` right-aligns + `.tabular`. **Renders no label** — supply your own |
+| `Select`                                        | Atom     | Native `<select>`; `options` array, optional `placeholder`                  |
+| `Table`, `TableHead`, `TableBody`, `TableRow`,  | Atom     | Primitives, not a data table. `numeric` on every GP/XP/level cell           |
+| `TableHeaderCell`, `TableCell`, `TableEmptyRow` |          | `TableEmptyRow` so empty states are stated, not implied                     |
+| `PriceTag`, `StatBadge`                         | Atom     | Single values                                                               |
+| `PriceChangeIndicator`, `ThemeToggle`           | Molecule |                                                                             |
+| `FeatureCard`                                   | Organism |                                                                             |
+| `CalculatorLayout`                              | Template |                                                                             |
+
+If one of these is close but not quite right, extend it rather than forking it —
+a second near-identical input is how a token system quietly stops being one.
+
 ## Adding a component
 
 1. Pick the layer with the table above.

@@ -10,6 +10,7 @@ not written up at the end.
 | [`/PRD.md`](../PRD.md)                                       | Product requirements, feature catalog, per-feature data source investigation                 |
 | [`/CLAUDE.md`](../CLAUDE.md)                                 | **Living context** — loaded into every AI session. Current state, hard rules, open questions |
 | [`api-terms.md`](./api-terms.md)                             | **Binding** third-party API terms and our compliance rules                                   |
+| [`environment.md`](./environment.md)                         | Every `.env.local` value — where to get it, why it exists, how to verify it                  |
 | [`theming.md`](./theming.md)                                 | Design tokens, dark mode, do/don't                                                           |
 | [`../src/components/README.md`](../src/components/README.md) | Atomic design, defined for this app                                                          |
 
@@ -35,6 +36,7 @@ valuable part.
 | [0010](./adr/0010-no-discord-bot.md)                     | No Discord bot — OAuth only                   | ~~Superseded by 0012~~ |
 | [0011](./adr/0011-third-party-api-compliance.md)         | Compliant, non-commercial API consumption     | Accepted               |
 | [0012](./adr/0012-no-authentication-public-read-only.md) | **No authentication — public, read-only app** | Accepted               |
+| [0013](./adr/0013-rate-limiting-shared-store.md)         | Rate limiting by hashed IP in shared Postgres | Accepted               |
 
 **To add one:** copy [`0000-template.md`](./adr/0000-template.md), take the next
 number, and **add a row above in the same commit**. The `write-adr` skill

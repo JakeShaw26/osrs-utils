@@ -1,161 +1,121 @@
-# Handoff — 2026-07-24
+# Handoff — 2026-07-26
 
 Snapshot for picking this up cold. **Living context is [`CLAUDE.md`](./CLAUDE.md)** —
-read that first; this file covers what happened in this session and what to do next.
+read that first; this file covers what just happened and what to do next.
 
-Delete or rewrite this file once Phase A is done. A stale handoff is worse than none.
+Rewrite this file when Phase B is under way. A stale handoff is worse than none.
 
 ---
 
 ## Where we stand in one paragraph
 
-The app pivoted from Discord-authenticated to **fully public and read-only**
-(ADR-0012). The auth module was deleted; the clan layer is now sourced from the
-Wise Old Man group API, which turned out to be richer than what auth provided.
-Foundations are in place, pushed to GitHub with CI green. **No user-facing
-feature exists yet.** Next up is Phase A: four shared foundations that must land
-before feature work fans out to parallel agents.
+**Phase A is complete.** The four shared foundations exist, are tested, and are
+documented: a rate limiter with a genuinely shared counter, a prices client, a
+Wiki Bucket client, and the shared atoms. `npm run check` is green (75 tests, up
+from 17) and the secret-free build passes. Along the way the Bucket API was
+re-probed live, which resolved most of open question **V9** — quest and
+equipment-stat buckets exist, drop tables do not — and turned up an injection
+surface nobody had noticed. **Still no user-facing feature exists.** Phase B is
+the fan-out to parallel feature agents, and it has not started.
 
 ---
 
 ## Repository state
 
-- **Remote:** <https://github.com/JakeShaw26/osrs-utils> · branch `main` · in sync
+- **Remote:** <https://github.com/JakeShaw26/osrs-utils> · branch `main`
 - **CI:** `.github/workflows/ci.yml` — typecheck, lint, format, tests, build on
   push to `main` and every PR. Runs with **no secrets**, deliberately.
-- **Tests:** 17 passing, 2 files. **Node 24.**
-- **Clan:** Void Reavers, **WOM group `25092`**, 78 members (measured, not assumed).
-
-### Commit history
-
-| Commit    | What                                                           |
-| --------- | -------------------------------------------------------------- |
-| `5202810` | Scaffold + P0 Discord auth — **superseded**, kept for recovery |
-| `1f4ba8b` | Remove authentication; public read-only app (ADR-0012)         |
-| `5caf620` | WOM group client + clan rank ordering; resolved V14            |
-| `95a87dd` | `.gitattributes`, line endings normalised to LF                |
-| `6b3f34d` | CI workflow                                                    |
-
-### What exists in `src/lib/`
-
-| Module               | Purpose                                                                           |
-| -------------------- | --------------------------------------------------------------------------------- |
-| `api/osrs-fetch.ts`  | **The only outbound chokepoint.** User-Agent, per-source TTLs, `assertNoFanOut()` |
-| `api/wom-group.ts`   | Clan roster, `gained` leaderboards, competitions. Typed from the observed payload |
-| `clan/ranks.ts`      | Rank ordering from the group's own `roleOrders`. Pure, no network                 |
-| `utils/format-gp.ts` | GP formatting; truncates toward zero so money is never overstated                 |
-| `db/schema.ts`       | Two tables only: `daily_snapshots`, `job_state`                                   |
-| `env.ts`             | **Lazy** `getEnv()` — never call at module scope                                  |
-
-Nothing renders any of this yet. `src/app/page.tsx` is a token/component proof,
-not a real landing page.
+- **Tests:** 75 passing, 6 files. **Node 24.**
+- **Clan:** Void Reavers, **WOM group `25092`**, 78 members (measured).
+- **Migrations:** `drizzle/0001_ordinary_multiple_man.sql` adds
+  `rate_limit_counters` and **has not been applied to any database yet.**
 
 ---
 
-## What changed this session, and why
+## What Phase A actually built
 
-**The pivot.** The owner removed Discord login entirely — setup friction, not
-wanting members to authorise a third-party app, wanting tools usable without
-login, and not wanting a hard Discord dependency.
+### A1. Rate limiting — `src/lib/ratelimit/`
 
-**The claim that made it work was verified before acting on it.** The owner said
-clan data was available from other APIs. It is: WOM group endpoints return the
-roster, the clan's own rank hierarchy, leaderboards and competitions
-**anonymously, one request each**. Without that, this decision would have deleted
-the clan layer rather than re-sourced it. Evidence is in
-[`docs/api-notes/wise-old-man-groups.md`](./docs/api-notes/wise-old-man-groups.md).
+Closes the open-proxy hole that removing auth reopened (PRD finding M2). Full
+reasoning: [ADR-0013](./docs/adr/0013-rate-limiting-shared-store.md).
 
-**Deleted:** `src/lib/auth/` (7 modules, 52 tests), sign-in page, Auth.js route,
-Discord verify script, `next-auth`. Schema went 14 tables → 2.
+| File                | Role                                                             |
+| ------------------- | ---------------------------------------------------------------- |
+| `index.ts`          | `enforceRateLimit()`, `RATE_LIMITS`, `tooManyRequests()`         |
+| `types.ts`          | `RateLimitStore` interface + the pure `decide()`                 |
+| `identity.ts`       | Client IP extraction and key hashing — the security-critical bit |
+| `postgres-store.ts` | Atomic upsert counter + `pruneRateLimitCounters()`               |
+| `memory-store.ts`   | Tests only, and labelled as such                                 |
 
-Git was initialised _before_ deleting, specifically so this is recoverable:
+Three things worth knowing before you touch a route:
 
-```bash
-git show 5202810:src/lib/auth/access.ts    # mutation-tested; recover, don't rewrite
+1. **It is the third line of defence.** Pre-aggregate, then cache, then limit.
+   Reaching for the limiter first usually means the feature should have been
+   pre-aggregated.
+2. **The IP comes from the _right_ of `X-Forwarded-For`.** Everything to the
+   left is attacker-supplied. `RATE_LIMIT_TRUSTED_PROXY_HOPS` controls how far
+   in to step; setting it too high silently disables limiting.
+3. **It fails open.** A store outage allows the request and sets
+   `degraded: true`. Log that — a dead limiter and a healthy one look identical
+   otherwise.
+
+Usage:
+
+```ts
+const decision = await enforceRateLimit(request, {
+  scope: 'hiscores',
+  rule: RATE_LIMITS.lookup,
+});
+if (!decision.allowed) return tooManyRequests(decision);
 ```
 
-**Documented in:** ADR-0012 (new), ADR-0005 and ADR-0010 (marked superseded with
-reasons), PRD §5 rewritten, §1.1/§3.8 revised, `CLAUDE.md`, `README.md`,
-`docs/api-terms.md`.
+### A2. Prices — `src/lib/api/prices.ts`
 
----
+`/latest`, `/mapping`, `/5m`, `/1h`, `/timeseries`. Two design points:
 
-## ⚠️ The one open security issue — read before writing any route
+- **Single-item lookups are served from the bulk `/latest` response**, not
+  `?id=`. One shared cache entry serves every visitor and every item, so
+  outbound traffic stops scaling with what people search for.
+- **`timestepForDays()` encodes the 365-point cap** so a "30-day chart" cannot
+  silently truncate. ~1 year is the ceiling of the data (ADR-0003).
 
-Removing auth **reopened a vulnerability the PRD had closed.**
+### A3. Wiki Bucket — `src/lib/api/wiki-bucket.ts`
 
-PRD review finding M2: per-user rate limiting is meaningless for anonymous
-traffic. The accepted fix was _"hiscores lookup requires login."_ **There is no
-login now, so that fix is void**, and it applies to all traffic rather than an
-edge case.
+**This one changed what we know about the API.** Probing it live turned up
+three things the existing notes did not have:
 
-Any endpoint proxying an upstream API lets a stranger hammer Jagex or the Wiki
-**from our IP**, and we get blocked — a direct breach of the self-limiting rule
-in [`docs/api-terms.md`](./docs/api-terms.md).
+- **The `query` parameter is parsed as a program.** A raw apostrophe returns
+  `')' expected near 's'` — a parser error. Interpolating an item name is
+  therefore **injection**, not a formatting bug, and OSRS names are full of
+  apostrophes. `escapeLiteral()` escapes `\` _before_ `'`; reversing those two
+  lines lets a trailing backslash escape our own closing quote. Tested.
+- **A bad query returns HTTP 200** with an `error` field, so a typo'd field name
+  otherwise looks like a legitimately empty result.
+- **`page_name` exists on every bucket** and appears in no published schema. It
+  is the only key that joins buckets — `infobox_bonuses` has no item-name field.
 
-**Nothing is exposed today** — no route proxies on demand yet. That changes with
-the first one. This is why rate limiting is Phase A item 1.
+**V9 is now mostly resolved:** `infobox_bonuses` (18 fields, full equipment
+stats) and `quest` (9 fields, but wiki _prose_, not structured data) both exist.
+No drop-table bucket exists under any obvious name.
 
-Full write-up: PRD §5.3 and ADR-0012 "Bad" section.
+Details: [`docs/api-notes/osrs-wiki-bucket.md`](./docs/api-notes/osrs-wiki-bucket.md).
 
----
+### A4. Atoms — `Input`, `Select`, `Table`
 
-## Phase A — next steps, in order
+Plus `TableHead/Body/Row/HeaderCell/Cell/EmptyRow`. Semantic tokens only, no
+`dark:` variants, `numeric` applies `.tabular` + right alignment. Inventory in
+[`src/components/README.md`](./src/components/README.md).
 
-Shared foundations. **Do these sequentially, before fanning out to agents**, or
-five agents will each invent their own price client.
-
-### A1. Rate limiting — start here
-
-Blocks everything that touches an upstream API on request.
-
-**The trap to avoid (back-end naive):** an in-memory `Map` of IP → count. It
-works perfectly on localhost and is silently useless in production, because each
-serverless instance has its own memory — ten instances means ten separate
-counters and ten times the intended limit. The state must be shared.
-
-Constraints:
-
-- Key by **IP**, since there is no user identity (that is the whole problem).
-- Hosting is deferred (ADR-0006), so keep it **host-agnostic** — no Vercel-only
-  primitive baked into call sites.
-- Postgres already exists and has a `job_state` table precedent; a fixed-window
-  or token-bucket counter there needs no new infrastructure. Upstash Redis is
-  the faster option if a dependency is acceptable later.
-- Put it behind a small interface so the backing store can change without
-  touching routes.
-
-Pair it with the other two controls from ADR-0012, which matter more than the
-limiter itself: **a cache shared across all visitors**, and **scheduled
-pre-aggregation** in preference to on-demand proxying. With no per-user
-variation, one upstream fetch can serve everyone — caching is a security control
-here, not a performance tweak.
-
-### A2. Prices client — `src/lib/api/prices.ts`
-
-On top of `osrsFetch('prices', …)`. Endpoints `/latest`, `/mapping`,
-`/timeseries`. **`/timeseries` caps at 365 points** — 5m≈2.3d, 1h≈15.3d,
-6h≈91.3d, 24h≈364d. ~1 year is the hard ceiling (ADR-0003); do not design a
-multi-year chart. Details in `docs/api-notes/osrs-wiki-prices.md`.
-
-### A3. Wiki Bucket client — static game data
-
-**Introspect the schema first — field names are not guessable.** `highalch` and
-`monster_name` are wrong; the real names are `high_alchemy_value` and `name`.
-`infobox_monster` has 55 fields, enough for a full DPS calculator. See
-`docs/api-notes/osrs-wiki-bucket.md`. Never use `osrsbox-db` (hard rule #8).
-
-### A4. Shared atoms — `Input`, `Select`, `Table`
-
-So parallel agents don't each write their own. Existing atoms: `Button`,
-`PriceTag`, `StatBadge`. Semantic tokens only; see `docs/theming.md`.
+**`Table` is primitives, not a data table.** A generic `<Table data columns>`
+accretes sorting, filtering, pagination and formatting until it is the hardest
+component in the repo. Compose the primitives in an organism instead.
 
 ---
 
 ## Phase B — parallel feature agents
 
-Once A is done, feature groups are genuinely independent: Economy, Combat,
-Skilling, Clues, Quests, Utility. Each owns `src/app/<feature>/` and
+Feature groups are now genuinely independent: **Economy, Combat, Skilling,
+Clues, Quests, Utility.** Each owns `src/app/<feature>/` and
 `src/lib/<feature>/`.
 
 **Use git worktrees, not branches in place.** One working directory can only
@@ -169,37 +129,52 @@ Rules that keep merges clean:
    They report intended changes; reconcile at merge.
 2. **ADRs as new files, no index row** — new files never conflict.
 3. **`npm run check` must pass before an agent reports done.**
-4. Each worktree needs its own `npm install` (546 MB) **and a copy of
+4. **Nobody adds a second `Input`.** The shared atoms exist precisely so five
+   agents don't produce five of them. Extend, don't fork.
+5. **Any route touching an upstream on request gets `enforceRateLimit()`** —
+   or, better, gets pre-aggregated so it doesn't touch an upstream at all.
+6. Each worktree needs its own `npm install` (546 MB) **and a copy of
    `.env.local`**, which is gitignored and therefore absent from a fresh
    worktree. The owner must provide it.
+
+**Suggested order.** Economy first — it needs no clan data and its client is
+already built. V3 blocks only the flipping calculator within it, not the group.
+Combat is next-best now that `infobox_bonuses` and `infobox_monster` are both
+confirmed to cover a DPS calculator.
 
 ---
 
 ## Open questions
 
-Resolved: V1, V11, V14. Moot: V11a, V4 (no auth, no RSN linking).
+Resolved: V1, V11, V14, and most of V9. Moot: V11a, V4 (no auth, no RSN links).
 
-| #   | Question                                                | Blocks               |
-| --- | ------------------------------------------------------- | -------------------- |
-| V3  | Current GE tax rate, cap and exemptions — rules changed | Flipping calculator  |
-| V5  | WOM stance on our anonymous read cadence                | Caching design (A1)  |
-| V10 | Cheap WOM group-level update endpoint?                  | Scheduled refresh    |
-| V2  | TempleOSRS terms unread (403)                           | Collection log       |
-| V9  | Quest/equipment/drop-table buckets exist?               | Quests, gear compare |
-| V13 | Free-tier cron limits + hosting cost                    | ADR-0006             |
+| #   | Question                                       | Blocks              |
+| --- | ---------------------------------------------- | ------------------- |
+| V3  | Current GE tax rate, cap and exemptions        | Flipping calculator |
+| V5  | WOM stance on our anonymous read cadence       | Caching design      |
+| V10 | Cheap WOM group-level update endpoint?         | Scheduled refresh   |
+| V2  | TempleOSRS terms unread (403)                  | Collection log      |
+| V9b | Where do drop tables live, if not in a bucket? | Drop-table features |
+| V13 | Free-tier cron limits + hosting cost           | ADR-0006            |
 
 ---
 
 ## Owner action items
 
-1. **Add `WOM_GROUP_ID="25092"` to `.env.local`**, and delete the
-   `AUTH_DISCORD_*` / `DISCORD_GUILD_ID` lines — nothing reads them. If a
-   throwaway Discord app was created for the abandoned V11a check, delete it.
-2. **Pin CI actions to commit SHAs** rather than `@v4`. A mutable tag can be
-   repointed at malicious code; this is a real supply-chain vector. Noted inline
-   in `.github/workflows/ci.yml`.
-3. Answer **V3** (GE tax) whenever convenient — it is the only thing blocking
-   the highest-value feature group.
+1. **Apply the new migration** (`npm run db:migrate`) before any route calls
+   `enforceRateLimit()` against the real store. Until then it fails open on
+   every request — which is safe, but it is not rate limiting.
+2. **`.env.local` is currently empty (0 bytes).** Nothing can run against real
+   data until it is filled in. **[`docs/environment.md`](./docs/environment.md)**
+   walks through where each value comes from; only four are required, and one of
+   those (`WOM_GROUP_ID`) is already correct in the template.
+3. **Pin CI actions to commit SHAs** rather than `@v4`. A mutable tag can be
+   repointed at malicious code; this is a real supply-chain vector. Noted
+   inline in `.github/workflows/ci.yml`. _(Carried over — still not done.)_
+4. Answer **V3** (GE tax) whenever convenient — the only thing blocking the
+   highest-value calculator.
+5. **Verify `RATE_LIMIT_TRUSTED_PROXY_HOPS` against the real topology** once a
+   host is chosen, and add edge/WAF limiting in front of the app.
 
 ---
 
@@ -209,6 +184,12 @@ Resolved: V1, V11, V14. Moot: V11a, V4 (no auth, no RSN linking).
   scope runs during `next build` where secrets legitimately don't exist. This
   broke the build once already; CI's secret-free build step is the regression
   test.
+- **Never concatenate a Bucket query.** See A3 above. Use `buildBucketQuery()`.
+- **Bucket fields may be repeated arrays** — `item_id` is `["1127"]`, `max_hit`
+  is `["41"]`, but `combat_level` is a plain number. Which is which is **not**
+  predictable from the field's meaning. Unwrap with `firstValue()`.
+- **Multi-version pages return multiple rows.** Zulrah is three rows with
+  different defences. That is data, not duplication.
 - **`roleOrders` indices are sparse** (`0,1,5,6,9,12,13,14,21,…`). Compare them;
   never treat one as an array position or a count.
 - **`gained` returns fewer rows than `memberCount`** (485 of 488 observed) —

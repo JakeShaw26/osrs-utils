@@ -3,8 +3,9 @@
 Loaded into every AI session. **Keep under ~200 lines** or it stops being read.
 Updating this is part of the definition of done for any architectural change.
 
-**Last updated:** 2026-07-24 (owner decision: **no authentication** — ADR-0012)
-**Current phase:** P0 — Foundation. **No features are implemented.**
+**Last updated:** 2026-07-26 (Phase A complete — shared foundations landed)
+**Current phase:** Phase A done; **Phase B (parallel feature agents) not started.**
+**No user-facing features are implemented.**
 
 ---
 
@@ -23,8 +24,7 @@ you find yourself reaching for a session, a user, or a permission check — stop
 and re-read ADR-0012.
 
 Full requirements: [`PRD.md`](./PRD.md). Decisions: [`docs/adr/`](./docs/adr/).
-**Resuming after a break?** [`HANDOFF.md`](./HANDOFF.md) has the current
-next-steps plan (Phase A).
+**Resuming after a break?** [`HANDOFF.md`](./HANDOFF.md) has the Phase B plan.
 
 ---
 
@@ -48,6 +48,9 @@ next-steps plan (Phase A).
    anonymous and untrusted. The only writers are `CRON_SECRET`-authenticated
    scheduled jobs and build-time fetches. A route handler that mutates state for
    a public caller is a defect. (OWASP A01 — ADR-0012)
+   _One documented exception,_ `rate_limit_counters`: no caller-supplied bytes,
+   increment-only, disposable. Anything failing all three tests isn't covered
+   (ADR-0013).
 6. **Never build anything that assumes a signed-in user.** No sessions, no
    accounts, no officer-only views, no per-user server state. Personal data
    (flip logs, timers, gear setups) belongs in the member's **browser**
@@ -62,6 +65,9 @@ next-steps plan (Phase A).
     read-only, self-limiting, honest identification. Treat its rules like
     "don't commit secrets" — if a task seems to require breaking one, stop and
     flag it. ([ADR-0011](./docs/adr/0011-third-party-api-compliance.md))
+11. **Never build a Wiki Bucket query by concatenation.** The wiki parses the
+    `query` parameter as a program, so an interpolated item name is injection
+    (OWASP A03). Use `buildBucketQuery()` in `lib/api/wiki-bucket.ts`.
 
 ---
 
@@ -82,21 +88,21 @@ next-steps plan (Phase A).
 | ~~Discord~~      | ~~OAuth only — no bot~~ — **Discord removed entirely**             | ~~[0010](./docs/adr/0010-no-discord-bot.md)~~                 |
 | API compliance   | Non-commercial, read-only, self-limiting                           | [0011](./docs/adr/0011-third-party-api-compliance.md)         |
 | **Auth**         | **None. Public, read-only. Clan identity = WOM group ID**          | [0012](./docs/adr/0012-no-authentication-public-read-only.md) |
+| Rate limiting    | Hashed IP, fixed window, shared Postgres counter, fails open       | [0013](./docs/adr/0013-rate-limiting-shared-store.md)         |
 
 ### Consequences of "no auth" that are easy to forget
 
-- **Officer-only views are impossible**, not merely hard. Anything unfit for
-  public view must not be built. Hiding it client-side is the exact OWASP A01
-  failure hard rule #5 exists to prevent.
-- **Custom clan events / bingo boards are gone** — they need trusted writes.
-  WOM competitions cover the common case; bespoke events do not survive.
+- **Officer-only views are impossible**, not merely hard — hiding one
+  client-side is the exact OWASP A01 failure hard rule #5 exists to prevent.
+  **Custom clan events / bingo boards** are gone too; they need trusted writes,
+  and WOM competitions cover the common case.
 - **Self-declared trackers** (CAs, diaries, quests) live in browser storage and
   vanish if a member clears it. Offer export/import.
-- **⚠️ We are now an open proxy unless deliberately defended.** The PRD's fix for
-  this was "hiscores lookup requires login" — void, there is no login. Any route
-  proxying an upstream API needs **edge/IP rate limiting + a shared cache +
-  preferably scheduled pre-aggregation** before it ships, or a stranger hammers
-  Jagex from our IP and _we_ get blocked. (PRD §5.3)
+- **⚠️ We are an open proxy unless deliberately defended.** Any route proxying
+  an upstream needs **pre-aggregation, then a shared cache, then rate limiting**
+  — in that order — or a stranger hammers Jagex from our IP and _we_ get
+  blocked. `enforceRateLimit()` exists now, but it is the **third** line of
+  defence; needing it to be safe usually means step 1 was skipped. (PRD §5.3)
 - **Everything is cacheable** — no per-user variation, so responses cache at the
   edge for all visitors. Caching is a security control here, not just speed.
 - **Scheduling** comes from platform cron or an external trigger hitting a
@@ -122,7 +128,8 @@ next-steps plan (Phase A).
 
 ## Verified API facts (don't re-derive)
 
-Detail in [`docs/api-notes/`](./docs/api-notes/). Verified 2026-07-24:
+Detail in [`docs/api-notes/`](./docs/api-notes/). Verified 2026-07-24, extended
+2026-07-26. All of these were measured against live endpoints, not read from docs:
 
 - **Hiscores send no CORS header** → backend proxy mandatory.
 - **Hiscores have no Combat Achievements, no Diaries, no quest data** → those
@@ -132,6 +139,12 @@ Detail in [`docs/api-notes/`](./docs/api-notes/). Verified 2026-07-24:
 - **Bucket field names are not guessable** — `highalch` and `monster_name` are
   wrong; it's `high_alchemy_value` and `name`. Introspect the schema first.
 - **`infobox_monster` has 55 fields**, enough for a full DPS calculator.
+- **A bad Bucket query returns HTTP 200** with an `error` field, so a status
+  check misses it and a typo looks like an empty result set.
+- **Buckets that exist** (V9, verified 2026-07-26): `infobox_item`,
+  `infobox_monster`, `infobox_bonuses` (full equipment stats), `quest` (prose,
+  not structured). **No drop-table bucket.** `page_name` is on every bucket and
+  is the only key that joins them.
 - **Wise Old Man:** 20 req/min, 100 with a free API key. MIT, actively maintained.
 - **WOM group endpoints need no auth and no key.** Roster, `roleOrders`,
   `gained` leaderboards and competitions are **one request each**, unpaginated —
@@ -148,9 +161,9 @@ Detail in [`docs/api-notes/`](./docs/api-notes/). Verified 2026-07-24:
 
 ## Open questions
 
-Full list: PRD §9.1. **V1, V11, V14 resolved** (ADR-0011, ADR-0010, and the
-group probe below). **V11a and V4 are moot** — there is no auth and no RSN
-linking to verify (ADR-0012).
+Full list: PRD §9.1. **V1, V11, V14 resolved**; **V9 mostly resolved** — quest
+and equipment buckets exist, drop tables do not. **V11a and V4 are moot** —
+there is no auth and no RSN linking to verify (ADR-0012).
 
 | #      | Question                                                     | Blocks                                                         |
 | ------ | ------------------------------------------------------------ | -------------------------------------------------------------- |
@@ -158,20 +171,17 @@ linking to verify (ADR-0012).
 | **V5** | WOM rate limits / stance on our anonymous read cadence       | Caching design                                                 |
 | V10    | Does a cheap WOM **group-level** update endpoint exist?      | P3                                                             |
 | V2     | TempleOSRS terms + API unread (403)                          | Collection log                                                 |
-| V9     | Do quest/equipment/drop-table buckets exist?                 | Quests, gear compare                                           |
+| V9b    | Where do drop tables live, if not in a bucket?               | Drop-table features only                                       |
 | V13    | Free-tier cron limits + hosting cost                         | [ADR-0006](./docs/adr/0006-hosting-tier-and-scheduled-jobs.md) |
 
 ---
 
 ## The auth module was deleted
 
-`src/lib/auth/` (7 modules, 52 tests), the sign-in page, the Auth.js route, and
-the Discord verification script were **removed** when ADR-0012 landed. They are
-preserved in commit **`5202810`** if auth is ever reintroduced — recover with
-`git show 5202810:src/lib/auth/access.ts`, don't rewrite from scratch.
-
-`decideAccess()` in particular was mutation-tested and is worth recovering
-rather than reimplementing.
+`src/lib/auth/` (7 modules, 52 tests), the sign-in page, the Auth.js route and
+the Discord verify script were removed when ADR-0012 landed, and are preserved
+in commit **`5202810`**. If auth ever returns, recover rather than rewrite —
+`git show 5202810:src/lib/auth/access.ts`. `decideAccess()` was mutation-tested.
 
 ## Built so far
 
@@ -179,26 +189,37 @@ rather than reimplementing.
 | ------------------------ | ---------------------------------------------------------------------------------- |
 | `lib/api/osrs-fetch.ts`  | The only outbound chokepoint. User-Agent, per-source TTLs, `assertNoFanOut`        |
 | `lib/api/wom-group.ts`   | Clan roster / `gained` leaderboards / competitions. Typed against the real payload |
+| `lib/api/prices.ts`      | GE prices. Bulk `/latest` over per-item; `timestepForDays` enforces the 365 cap    |
+| `lib/api/wiki-bucket.ts` | Static game data. `buildBucketQuery` is the injection boundary — never concatenate |
+| `lib/ratelimit/`         | `enforceRateLimit()` + shared Postgres counter. Store is swappable behind an iface |
 | `lib/clan/ranks.ts`      | Rank ordering from `roleOrders`. Pure, no network — **no hardcoded ladder**        |
 | `lib/utils/format-gp.ts` | GP formatting; truncates towards zero so money is never overstated                 |
 
-17 tests. `ranks.test.ts` uses the **real** Void Reavers `roleOrders` fixture.
+**Atoms:** `Button`, `Input`, `Select`, `Table` (+ cells), `PriceTag`,
+`StatBadge` — check [`src/components/README.md`](./src/components/README.md)
+before writing a new one.
 
-## Next tasks (in order)
+75 tests. The escaping and IP-spoofing tests encode behaviour verified against
+live APIs; `ranks.test.ts` uses the real Void Reavers `roleOrders` fixture.
 
-1. **Rate limiting before any upstream-proxying route ships** (see the
-   open-proxy warning above). Currently nothing proxies on demand, so nothing
-   is exposed — that changes the moment a hiscores lookup lands.
-2. **A roster page** rendering `sortByRank`/`groupByRank`, surfacing
-   `player.updatedAt` so staleness is visible rather than implied.
-3. First calculator — GE/economy is the highest-value, lowest-dependency group
-   and needs no clan data at all. **V3 (GE tax) blocks the flipping calculator.**
+## Next tasks
 
-## Elsewhere: scaffolded, not implemented
+**Phase B — parallel feature agents.** Feature groups are now independent:
+Economy, Combat, Skilling, Clues, Quests, Utility. Each owns
+`src/app/<feature>/` and `src/lib/<feature>/`. See [`HANDOFF.md`](./HANDOFF.md)
+for the worktree rules that keep merges clean.
 
-The two remaining tables have no writers; `src/app/page.tsx` is a
-component/token proof, not a real landing page. No pages consume
-`wom-group.ts` yet — the client exists, nothing renders it.
+Highest value first: **Economy** (no clan data, no blockers except V3 for the
+flipping calculator), then a **roster page** over `sortByRank`/`groupByRank`
+surfacing `player.updatedAt` so staleness is visible rather than implied.
+
+## Elsewhere: built, but nothing renders it
+
+**No page consumes any `lib/api/` client yet** — all are tested, none are
+displayed; the first feature agent is their first caller. `daily_snapshots` has
+no writer, and `src/app/page.tsx` is a token proof, not a landing page.
+`rate_limit_counters` wants a `CRON_SECRET`-protected `pruneRateLimitCounters()`
+job — nothing breaks without it, the table just grows.
 
 ---
 
