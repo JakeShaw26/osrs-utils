@@ -1,0 +1,96 @@
+{
+  "$comment": "Authored Agility course data. There is no API for any of this (PRD §3.3). XP per lap and level requirements are game constants; xp/hr and marks/hr are ESTIMATES that vary with diaries, gear and how attentively the course is run — which is why the UI shows the low/high range rather than a single number. Bump `version` and `updated` on any change.",
+  "version": 1,
+  "updated": "2026-07-26",
+  "source": {
+    "title": "OSRS Wiki: Rooftop Agility Course (XP per lap, level) and Agility training (xp/hr, marks/hr)",
+    "url": "https://oldschool.runescape.wiki/w/Rooftop_Agility_Course",
+    "retrieved": "2026-07-26",
+    "basis": "wiki-guide"
+  },
+  "courses": [
+    {
+      "id": "draynor",
+      "name": "Draynor Village",
+      "minLevel": 1,
+      "xpPerLap": 120,
+      "xpPerHour": { "low": 9000, "high": 10000 },
+      "marksPerHour": { "low": 11.0, "high": 12.4 },
+      "recommendedTo": 20
+    },
+    {
+      "id": "al-kharid",
+      "name": "Al Kharid",
+      "minLevel": 20,
+      "xpPerLap": 216,
+      "xpPerHour": { "low": 11000, "high": 12000 },
+      "marksPerHour": { "low": 10.4, "high": 11.4 },
+      "recommendedTo": 30
+    },
+    {
+      "id": "varrock",
+      "name": "Varrock",
+      "minLevel": 30,
+      "xpPerLap": 270,
+      "xpPerHour": { "low": 11000, "high": 14000 },
+      "marksPerHour": { "low": 8.4, "high": 10.8 },
+      "recommendedTo": 40
+    },
+    {
+      "id": "canifis",
+      "name": "Canifis",
+      "minLevel": 40,
+      "xpPerLap": 240,
+      "xpPerHour": { "low": 14000, "high": 17000 },
+      "marksPerHour": { "low": 12.8, "high": 15.5 },
+      "recommendedTo": 50
+    },
+    {
+      "id": "falador",
+      "name": "Falador",
+      "minLevel": 50,
+      "xpPerLap": 586,
+      "xpPerHour": { "low": 29000, "high": 34000 },
+      "marksPerHour": { "low": 9.7, "high": 11.3 },
+      "recommendedTo": 60
+    },
+    {
+      "id": "seers-village",
+      "name": "Seers' Village",
+      "minLevel": 60,
+      "xpPerLap": 570,
+      "xpPerHour": { "low": 40000, "high": 56000 },
+      "marksPerHour": { "low": 11.8, "high": 16.0 },
+      "recommendedTo": 70,
+      "note": "The upper rate assumes the Kandarin Hard Diary camelot teleport shortcut."
+    },
+    {
+      "id": "pollnivneach",
+      "name": "Pollnivneach",
+      "minLevel": 70,
+      "xpPerLap": 890,
+      "xpPerHour": { "low": 47000, "high": 58000 },
+      "marksPerHour": { "low": 13.0, "high": 18.0 },
+      "recommendedTo": 80
+    },
+    {
+      "id": "rellekka",
+      "name": "Rellekka",
+      "minLevel": 80,
+      "xpPerLap": 780,
+      "xpPerHour": { "low": 50000, "high": 63000 },
+      "marksPerHour": { "low": 13.0, "high": 19.5 },
+      "recommendedTo": 90
+    },
+    {
+      "id": "ardougne",
+      "name": "Ardougne",
+      "minLevel": 90,
+      "xpPerLap": 889,
+      "xpPerHour": { "low": 66000, "high": 70000 },
+      "marksPerHour": { "low": 16.8, "high": 22.1 },
+      "recommendedTo": 99,
+      "note": "The upper marks rate includes the Ardougne Elite Diary bonus."
+    }
+  ]
+}

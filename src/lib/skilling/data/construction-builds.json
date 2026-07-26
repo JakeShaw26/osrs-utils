@@ -1,0 +1,103 @@
+{
+  "$comment": "Authored Construction material lists. Level, XP and plank counts are game constants; xp/hr is an ESTIMATE. Prices come from the live GE at render time — nothing here is a price. Bump `version` and `updated` on any change.",
+  "version": 1,
+  "updated": "2026-07-26",
+  "source": {
+    "title": "OSRS Wiki: Construction training",
+    "url": "https://oldschool.runescape.wiki/w/Construction_training",
+    "retrieved": "2026-07-26",
+    "basis": "wiki-guide"
+  },
+  "builds": [
+    {
+      "id": "crude-wooden-chair",
+      "name": "Crude wooden chair",
+      "room": "Parlour",
+      "minLevel": 1,
+      "xpPerBuild": 58,
+      "materials": [
+        { "item": "Plank", "quantity": 2 },
+        { "item": "Steel nails", "quantity": 2 }
+      ],
+      "xpPerHour": 60000
+    },
+    {
+      "id": "wooden-bookcase",
+      "name": "Wooden bookcase",
+      "room": "Study",
+      "minLevel": 4,
+      "xpPerBuild": 115,
+      "materials": [
+        { "item": "Plank", "quantity": 4 },
+        { "item": "Steel nails", "quantity": 4 }
+      ],
+      "xpPerHour": 115000
+    },
+    {
+      "id": "wooden-larder",
+      "name": "Wooden larder",
+      "room": "Kitchen",
+      "minLevel": 9,
+      "xpPerBuild": 228,
+      "materials": [
+        { "item": "Plank", "quantity": 8 },
+        { "item": "Steel nails", "quantity": 8 }
+      ],
+      "xpPerHour": 228000
+    },
+    {
+      "id": "oak-dining-table",
+      "name": "Oak dining table",
+      "room": "Dining room",
+      "minLevel": 22,
+      "xpPerBuild": 240,
+      "materials": [{ "item": "Oak plank", "quantity": 4 }],
+      "xpPerHour": 240000
+    },
+    {
+      "id": "oak-larder",
+      "name": "Oak larder",
+      "room": "Kitchen",
+      "minLevel": 33,
+      "xpPerBuild": 480,
+      "materials": [{ "item": "Oak plank", "quantity": 8 }],
+      "xpPerHour": 480000
+    },
+    {
+      "id": "mahogany-table",
+      "name": "Mahogany table",
+      "room": "Dining room",
+      "minLevel": 52,
+      "xpPerBuild": 840,
+      "materials": [{ "item": "Mahogany plank", "quantity": 6 }],
+      "xpPerHour": 900000
+    },
+    {
+      "id": "teak-garden-bench",
+      "name": "Teak garden bench",
+      "room": "Superior garden",
+      "minLevel": 66,
+      "xpPerBuild": 540,
+      "materials": [{ "item": "Teak plank", "quantity": 6 }],
+      "xpPerHour": 700000
+    },
+    {
+      "id": "oak-dungeon-door",
+      "name": "Oak dungeon door",
+      "room": "Dungeon corridor",
+      "minLevel": 74,
+      "xpPerBuild": 600,
+      "materials": [{ "item": "Oak plank", "quantity": 10 }],
+      "xpPerHour": 550000
+    },
+    {
+      "id": "gnome-bench",
+      "name": "Gnome bench",
+      "room": "Superior garden",
+      "minLevel": 77,
+      "xpPerBuild": 840,
+      "materials": [{ "item": "Mahogany plank", "quantity": 6 }],
+      "xpPerHour": 1100000
+    }
+  ]
+}

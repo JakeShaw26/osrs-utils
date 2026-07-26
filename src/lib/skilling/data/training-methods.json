@@ -1,0 +1,290 @@
+{
+  "$comment": "Authored training rates. See src/lib/skilling/training-methods.ts for the contract and docs/adr/0016-authored-skilling-rates.md for why these live in the repo rather than the database. Every rate is an ESTIMATE. Bump `version` and `updated` on any change so a reviewer can see the diff.",
+  "version": 1,
+  "updated": "2026-07-26",
+  "methods": [
+    {
+      "id": "prayer-dragon-bones-gilded",
+      "skill": "Prayer",
+      "name": "Dragon bones, gilded altar (2 burners)",
+      "minLevel": 1,
+      "xpPerAction": 252,
+      "xpPerHour": 642600,
+      "inputs": [{ "item": "Dragon bones", "quantity": 1 }],
+      "outputs": [],
+      "note": "72 base XP at 350% with both incense burners lit. Needs 75 Construction for the altar.",
+      "source": {
+        "title": "OSRS Wiki: Prayer training",
+        "url": "https://oldschool.runescape.wiki/w/Prayer_training",
+        "retrieved": "2026-07-26",
+        "basis": "wiki-guide"
+      }
+    },
+    {
+      "id": "prayer-superior-dragon-bones-gilded",
+      "skill": "Prayer",
+      "name": "Superior dragon bones, gilded altar (2 burners)",
+      "minLevel": 1,
+      "xpPerAction": 525,
+      "xpPerHour": 1338750,
+      "inputs": [{ "item": "Superior dragon bones", "quantity": 1 }],
+      "outputs": [],
+      "note": "150 base XP at 350%. The fastest Prayer XP in the game, and the most expensive.",
+      "source": {
+        "title": "OSRS Wiki: Prayer training",
+        "url": "https://oldschool.runescape.wiki/w/Prayer_training",
+        "retrieved": "2026-07-26",
+        "basis": "wiki-guide"
+      }
+    },
+    {
+      "id": "prayer-dragon-bones-chaos",
+      "skill": "Prayer",
+      "name": "Dragon bones, Chaos Altar (Wilderness)",
+      "minLevel": 1,
+      "xpPerAction": 252,
+      "xpPerHour": 504000,
+      "inputs": [{ "item": "Dragon bones", "quantity": 0.5 }],
+      "outputs": [],
+      "note": "Quantity is 0.5, not 1: the Chaos Altar has a 50% chance to not consume the bone, so the EXPECTED cost per offering is half a bone. It is in level 38 Wilderness — the risk of being killed is not modelled here.",
+      "source": {
+        "title": "OSRS Wiki: Prayer training",
+        "url": "https://oldschool.runescape.wiki/w/Prayer_training",
+        "retrieved": "2026-07-26",
+        "basis": "wiki-guide"
+      }
+    },
+    {
+      "id": "herblore-prayer-potions",
+      "skill": "Herblore",
+      "name": "Prayer potions",
+      "minLevel": 38,
+      "xpPerAction": 87.5,
+      "xpPerHour": 218750,
+      "inputs": [
+        { "item": "Ranarr potion (unf)", "quantity": 1 },
+        { "item": "Snape grass", "quantity": 1 }
+      ],
+      "outputs": [{ "item": "Prayer potion(4)", "quantity": 1 }],
+      "note": "Normally profitable, so gp/xp is usually negative — you are paid to train.",
+      "source": {
+        "title": "OSRS Wiki: Herblore training",
+        "url": "https://oldschool.runescape.wiki/w/Herblore_training",
+        "retrieved": "2026-07-26",
+        "basis": "wiki-guide"
+      }
+    },
+    {
+      "id": "herblore-super-restores",
+      "skill": "Herblore",
+      "name": "Super restores",
+      "minLevel": 63,
+      "xpPerAction": 142.5,
+      "xpPerHour": 356000,
+      "inputs": [
+        { "item": "Snapdragon potion (unf)", "quantity": 1 },
+        { "item": "Red spiders' eggs", "quantity": 1 }
+      ],
+      "outputs": [{ "item": "Super restore(4)", "quantity": 1 }],
+      "source": {
+        "title": "OSRS Wiki: Herblore training",
+        "url": "https://oldschool.runescape.wiki/w/Herblore_training",
+        "retrieved": "2026-07-26",
+        "basis": "wiki-guide"
+      }
+    },
+    {
+      "id": "herblore-ranging-potions",
+      "skill": "Herblore",
+      "name": "Ranging potions",
+      "minLevel": 72,
+      "xpPerAction": 162.5,
+      "xpPerHour": 406250,
+      "inputs": [
+        { "item": "Dwarf weed potion (unf)", "quantity": 1 },
+        { "item": "Wine of zamorak", "quantity": 1 }
+      ],
+      "outputs": [{ "item": "Ranging potion(4)", "quantity": 1 }],
+      "source": {
+        "title": "OSRS Wiki: Herblore training",
+        "url": "https://oldschool.runescape.wiki/w/Herblore_training",
+        "retrieved": "2026-07-26",
+        "basis": "wiki-guide"
+      }
+    },
+    {
+      "id": "herblore-saradomin-brews",
+      "skill": "Herblore",
+      "name": "Saradomin brews",
+      "minLevel": 81,
+      "xpPerAction": 180,
+      "xpPerHour": 450000,
+      "inputs": [
+        { "item": "Toadflax potion (unf)", "quantity": 1 },
+        { "item": "Crushed nest", "quantity": 1 }
+      ],
+      "outputs": [{ "item": "Saradomin brew(4)", "quantity": 1 }],
+      "note": "The fastest Herblore XP per hour of the standard potions.",
+      "source": {
+        "title": "OSRS Wiki: Herblore training",
+        "url": "https://oldschool.runescape.wiki/w/Herblore_training",
+        "retrieved": "2026-07-26",
+        "basis": "wiki-guide"
+      }
+    },
+    {
+      "id": "fletching-string-maple-longbows",
+      "skill": "Fletching",
+      "name": "String maple longbows",
+      "minLevel": 55,
+      "xpPerAction": 58.3,
+      "xpPerHour": 157410,
+      "inputs": [
+        { "item": "Maple longbow (u)", "quantity": 1 },
+        { "item": "Bow string", "quantity": 1 }
+      ],
+      "outputs": [{ "item": "Maple longbow", "quantity": 1 }],
+      "source": {
+        "title": "OSRS Wiki: Fletching training",
+        "url": "https://oldschool.runescape.wiki/w/Fletching_training",
+        "retrieved": "2026-07-26",
+        "basis": "wiki-guide"
+      }
+    },
+    {
+      "id": "fletching-string-yew-longbows",
+      "skill": "Fletching",
+      "name": "String yew longbows",
+      "minLevel": 70,
+      "xpPerAction": 75,
+      "xpPerHour": 202500,
+      "inputs": [
+        { "item": "Yew longbow (u)", "quantity": 1 },
+        { "item": "Bow string", "quantity": 1 }
+      ],
+      "outputs": [{ "item": "Yew longbow", "quantity": 1 }],
+      "source": {
+        "title": "OSRS Wiki: Fletching training",
+        "url": "https://oldschool.runescape.wiki/w/Fletching_training",
+        "retrieved": "2026-07-26",
+        "basis": "wiki-guide"
+      }
+    },
+    {
+      "id": "fletching-string-magic-longbows",
+      "skill": "Fletching",
+      "name": "String magic longbows",
+      "minLevel": 85,
+      "xpPerAction": 91.5,
+      "xpPerHour": 247050,
+      "inputs": [
+        { "item": "Magic longbow (u)", "quantity": 1 },
+        { "item": "Bow string", "quantity": 1 }
+      ],
+      "outputs": [{ "item": "Magic longbow", "quantity": 1 }],
+      "source": {
+        "title": "OSRS Wiki: Fletching training",
+        "url": "https://oldschool.runescape.wiki/w/Fletching_training",
+        "retrieved": "2026-07-26",
+        "basis": "wiki-guide"
+      }
+    },
+    {
+      "id": "fletching-cut-maple-longbows",
+      "skill": "Fletching",
+      "name": "Cut maple longbows (u)",
+      "minLevel": 55,
+      "xpPerAction": 58.3,
+      "xpPerHour": 104940,
+      "inputs": [{ "item": "Maple logs", "quantity": 1 }],
+      "outputs": [{ "item": "Maple longbow (u)", "quantity": 1 }],
+      "source": {
+        "title": "OSRS Wiki: Fletching training",
+        "url": "https://oldschool.runescape.wiki/w/Fletching_training",
+        "retrieved": "2026-07-26",
+        "basis": "wiki-guide"
+      }
+    },
+    {
+      "id": "fletching-cut-yew-longbows",
+      "skill": "Fletching",
+      "name": "Cut yew longbows (u)",
+      "minLevel": 70,
+      "xpPerAction": 75,
+      "xpPerHour": 135000,
+      "inputs": [{ "item": "Yew logs", "quantity": 1 }],
+      "outputs": [{ "item": "Yew longbow (u)", "quantity": 1 }],
+      "source": {
+        "title": "OSRS Wiki: Fletching training",
+        "url": "https://oldschool.runescape.wiki/w/Fletching_training",
+        "retrieved": "2026-07-26",
+        "basis": "wiki-guide"
+      }
+    },
+    {
+      "id": "construction-oak-larders",
+      "skill": "Construction",
+      "name": "Oak larders",
+      "minLevel": 33,
+      "xpPerAction": 480,
+      "xpPerHour": 480000,
+      "inputs": [{ "item": "Oak plank", "quantity": 8 }],
+      "outputs": [],
+      "source": {
+        "title": "OSRS Wiki: Construction training",
+        "url": "https://oldschool.runescape.wiki/w/Construction_training",
+        "retrieved": "2026-07-26",
+        "basis": "wiki-guide"
+      }
+    },
+    {
+      "id": "construction-teak-garden-benches",
+      "skill": "Construction",
+      "name": "Teak garden benches",
+      "minLevel": 66,
+      "xpPerAction": 540,
+      "xpPerHour": 700000,
+      "inputs": [{ "item": "Teak plank", "quantity": 6 }],
+      "outputs": [],
+      "source": {
+        "title": "OSRS Wiki: Construction training",
+        "url": "https://oldschool.runescape.wiki/w/Construction_training",
+        "retrieved": "2026-07-26",
+        "basis": "wiki-guide"
+      }
+    },
+    {
+      "id": "construction-mahogany-tables",
+      "skill": "Construction",
+      "name": "Mahogany tables",
+      "minLevel": 52,
+      "xpPerAction": 840,
+      "xpPerHour": 900000,
+      "inputs": [{ "item": "Mahogany plank", "quantity": 6 }],
+      "outputs": [],
+      "source": {
+        "title": "OSRS Wiki: Construction training",
+        "url": "https://oldschool.runescape.wiki/w/Construction_training",
+        "retrieved": "2026-07-26",
+        "basis": "wiki-guide"
+      }
+    },
+    {
+      "id": "construction-gnome-benches",
+      "skill": "Construction",
+      "name": "Gnome benches",
+      "minLevel": 77,
+      "xpPerAction": 840,
+      "xpPerHour": 1100000,
+      "inputs": [{ "item": "Mahogany plank", "quantity": 6 }],
+      "outputs": [],
+      "note": "Same planks and XP as mahogany tables, but a faster build cycle.",
+      "source": {
+        "title": "OSRS Wiki: Construction training",
+        "url": "https://oldschool.runescape.wiki/w/Construction_training",
+        "retrieved": "2026-07-26",
+        "basis": "wiki-guide"
+      }
+    }
+  ]
+}
