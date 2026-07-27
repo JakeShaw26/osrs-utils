@@ -27,6 +27,19 @@ updates:
     open-pull-requests-limit: 5
     commit-message:
       prefix: deps
+    ignore:
+      # ESLint 10 removed `context.getFilename()`. `eslint-plugin-react` — which
+      # we do not depend on directly, it arrives bundled inside
+      # `eslint-config-next` — still calls it, and its latest release (7.37.5)
+      # peers at `eslint: ^9.7`. So the whole lint step dies on load, and there
+      # is no version of the plugin we could bump to in response.
+      #
+      # Without this, Dependabot reopens the same unmergeable PR every week.
+      # Remove it once eslint-plugin-react's peer range admits ESLint 10
+      # (`npm view eslint-plugin-react peerDependencies`).
+      - dependency-name: eslint
+        update-types:
+          - version-update:semver-major
     groups:
       # Patch and minor bumps land as one PR rather than fifteen. Majors stay
       # separate — those are the ones that need reading, and burying a Next.js
