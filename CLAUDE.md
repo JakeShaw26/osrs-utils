@@ -243,14 +243,15 @@ live APIs; `ranks.test.ts` uses the real Void Reavers `roleOrders` fixture.
 Full detail in [`HANDOFF.md`](./HANDOFF.md).
 
 1. **Push `main` and close PRs #4, #6, #9, #10.** The merges are local only.
-2. **Pin CI actions to commit SHAs** rather than `@v4`. The only outstanding
-   item that is a security issue rather than a feature — a mutable tag can be
-   repointed at code that runs in CI with `CRON_SECRET` and `DATABASE_URL`.
-   Carried over four handoffs now.
-3. **Roster page** over `sortByRank`/`groupByRank`, surfacing
+2. **Roster page** over `sortByRank`/`groupByRank`, surfacing
    `player.updatedAt` so staleness is visible rather than implied.
-4. **`pruneRateLimitCounters()` job** behind `CRON_SECRET`.
-5. **De-duplicate the numeric field** across combat/skilling/quests.
+3. **`pruneRateLimitCounters()` job** behind `CRON_SECRET`.
+4. **De-duplicate the numeric field** across combat/skilling/quests.
+
+**CI actions are pinned to commit SHAs** (done 2026-07-27) — `@v4` is mutable
+and CI is where `CRON_SECRET` and `DATABASE_URL` will live. Keep the trailing
+`# v4.4.0` comment accurate when bumping; `.github/dependabot.yml` moves both
+together. **Never reintroduce a bare tag**, including in a new workflow.
 
 ## Built, but not wired up
 

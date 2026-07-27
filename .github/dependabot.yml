@@ -1,0 +1,37 @@
+version: 2
+
+# Pinning actions to commit SHAs (see workflows/ci.yml) fixes the mutable-tag
+# problem and creates a new one: a SHA never updates, so a pinned action silently
+# goes stale and stops receiving security patches. Nobody notices, because
+# nothing fails.
+#
+# This is the other half of that change. Dependabot opens a PR when a pinned
+# action publishes a new release, updating BOTH the SHA and the `# v4.4.0`
+# comment beside it — so the pin stays current through review rather than
+# through trust.
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    # One PR per week at most. This repo has two actions; a daily cadence would
+    # produce noise without producing information.
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: ci
+
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: deps
+    groups:
+      # Patch and minor bumps land as one PR rather than fifteen. Majors stay
+      # separate — those are the ones that need reading, and burying a Next.js
+      # major in a batch of twenty is how it gets merged unread.
+      minor-and-patch:
+        update-types:
+          - minor
+          - patch

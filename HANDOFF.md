@@ -140,6 +140,22 @@ it they prerender and fetch the GE during the build.
   numeric fields (`combat/NumberField`, `skilling/NumericField`,
   `quests/LevelField`) and two `SelectField`s. Nothing failed as a result, which
   is exactly why it needed writing down.
+- **CI actions pinned to commit SHAs.** Carried over four handoffs, now done:
+  `actions/checkout` and `actions/setup-node` are pinned to 40-character SHAs
+  with the version in a trailing comment. Both SHAs were resolved from
+  `git ls-remote` and cross-checked against the `v4.4.0` tags rather than
+  recalled — a wrong trailing comment is worse than none, because it is the
+  only readable half of the line.
+
+  **`.github/dependabot.yml` was added in the same change.** Pinning alone
+  trades a mutable-tag risk for a stale-action risk: a SHA never updates, so a
+  pinned action silently stops receiving security patches and nothing fails to
+  tell you. Dependabot bumps the SHA and the comment together, through review.
+
+  Deliberately **not** upgraded to `v7`, which is current. Pinning and a major
+  version bump are separate decisions with separate blast radii, and v5+ change
+  the action runtime. Worth doing, separately, on purpose.
+
 - **ADR index rows for 0016 and 0018** — no longer "reserved", both on `main`.
 - **`/skilling` and `/quests` added to `lib/navigation/tools.ts`.** They shipped
   eight routes the landing page advertised nowhere, and every test stayed green:
@@ -164,15 +180,7 @@ the PR-merge action was blocked in this session. If you would rather have the
 merge commits GitHub generates, reset to `origin/main` and merge through the UI
 instead — the content is identical either way.
 
-### 2. Pin CI actions to commit SHAs (~10 min)
-
-**The only outstanding item that is a security issue rather than a feature, and
-it has now been carried over four handoffs.** `@v4` is a **mutable** tag: whoever
-controls the action can repoint it at code that runs in CI with access to
-`CRON_SECRET` and `DATABASE_URL`. Pin to a full 40-character SHA with the
-version in a trailing comment.
-
-### 3. Then pick from these
+### 2. Then pick from these
 
 - **Roster page.** The highest-value thing not yet built: `sortByRank` /
   `groupByRank` over the WOM group, surfacing `player.updatedAt` so staleness is

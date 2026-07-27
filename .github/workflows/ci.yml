@@ -21,14 +21,27 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      # SUPPLY CHAIN: `@v4` is a mutable tag — whoever controls it can point it
-      # at different code. Pinning to a full commit SHA is stronger:
-      #     uses: actions/checkout@<40-char-sha>  # v4.2.2
-      # Tags are used here for readability; switch to SHAs before this repo
-      # handles anything valuable, and let Dependabot bump them.
-      - uses: actions/checkout@v4
+      # SUPPLY CHAIN: pinned to full commit SHAs, not tags.
+      #
+      # `@v4` is a MUTABLE git tag. Whoever controls the action repository can
+      # move it to different code at any time, and every workflow using it picks
+      # that up on the next run with no diff, no review and no notification. A
+      # commit SHA is immutable — the content is fixed by the hash itself.
+      #
+      # That matters here because these steps run in the same job as `npm ci`
+      # and `npm run build`, and CI is where CRON_SECRET and DATABASE_URL live
+      # once this repo deploys. A moved tag is arbitrary code execution with
+      # access to them. This is the tj-actions/changed-files compromise of March
+      # 2025 in one line, where a retagged action leaked secrets from tens of
+      # thousands of repositories.
+      #
+      # The trailing comment is the human-readable version — keep it accurate
+      # when bumping, because the SHA alone is unreadable. `../dependabot.yml`
+      # updates both together, which is the half of this change that stops a
+      # pin from quietly going stale.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 24
           cache: npm
