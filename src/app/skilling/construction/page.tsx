@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { connection } from 'next/server';
 import { CalculatorLayout } from '@/components/templates/CalculatorLayout';
 import { ConstructionCalculator } from '@/components/organisms/skilling/ConstructionCalculator';
 import {
@@ -16,10 +17,11 @@ export const metadata: Metadata = {
     'Turn a Construction XP goal into a priced plank shopping list, using live Grand Exchange prices.',
 };
 
-/** Live prices — see the note in ../methods/page.tsx for why this is dynamic. */
-export const dynamic = 'force-dynamic';
+/** Live prices — see the note in ../methods/page.tsx for why these two, together. */
+export const fetchCache = 'default-cache';
 
 export default async function ConstructionPage() {
+  await connection();
   const lookup = await fetchPricesForItems(constructionItemNames());
 
   return (

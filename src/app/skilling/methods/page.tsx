@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { connection } from 'next/server';
 import { CalculatorLayout } from '@/components/templates/CalculatorLayout';
 import { TrainingMethodComparator } from '@/components/organisms/skilling/TrainingMethodComparator';
 import { fetchPricesForItems } from '@/lib/skilling/pricing';
@@ -16,20 +17,33 @@ export const metadata: Metadata = {
 };
 
 /**
- * WHY `force-dynamic`
+ * WHY `connection()` AND `fetchCache`, RATHER THAN `force-dynamic`
  *
- * This page reads live prices. Without it, `next build` would try to prerender
- * the route, which means fetching the Grand Exchange during a build that runs
- * with no secrets and therefore no `OSRS_API_USER_AGENT` — CI would fail on a
- * page that is perfectly correct at runtime.
+ * Two separate problems that look like one.
  *
- * `fetchPricesForItems` never throws, so even at runtime a dead upstream
- * degrades to "prices unavailable" rather than an error page. Both guards are
- * deliberate: one keeps the build green, the other keeps the tool usable.
+ * 1. Keep the page out of `next build`. It reads live prices, so prerendering
+ *    would fetch the Grand Exchange during a build that runs with no secrets
+ *    and therefore no `OSRS_API_USER_AGENT` — CI fails on a page that is
+ *    perfectly correct at runtime. `await connection()` defers the render to
+ *    request time, which is all that is needed.
+ *
+ * 2. Keep the shared cache. `force-dynamic` also solved (1), but it is
+ *    documented as equivalent to `fetchCache = 'force-no-store'`, which
+ *    re-fetches "even if they provide a 'force-cache' option" — silently
+ *    overriding the TTLs `osrsFetch` sets on `/mapping` (24h) and `/latest`
+ *    (60s). That turns one shared upstream request per TTL into ~1MB from the
+ *    Wiki on every single page load, by an anonymous public caller: the open
+ *    proxy of hard rule #4 and PRD §5.3. `'default-cache'` honours each
+ *    fetch's own option instead. (ADR-0014, and the same defect PR #8 fixed
+ *    in Economy — this branch predates that fix.)
+ *
+ * `fetchPricesForItems` never throws, so a dead upstream still degrades to
+ * "prices unavailable" rather than an error page.
  */
-export const dynamic = 'force-dynamic';
+export const fetchCache = 'default-cache';
 
 export default async function TrainingMethodsPage() {
+  await connection();
   const lookup = await fetchPricesForItems(requiredItemNames());
 
   return (
