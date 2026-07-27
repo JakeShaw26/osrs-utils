@@ -4,12 +4,11 @@ Loaded into every AI session. **Keep under ~200 lines** or it stops being read.
 Updating this is part of the definition of done for any architectural change.
 
 **Last updated:** 2026-07-27
-**Current phase:** **Phase B ~80% done.** Four of six feature slices are merged
-(Economy, Combat, Clues, Utility) — **19 routes, 580+ tests**. Skilling (PR #4)
-and Quests (PR #6) are open and blocked on a database, because both add
-`enforceRateLimit()`-gated proxies and the rate-limit migration has never been
-applied anywhere. PR #9 adds local Postgres.
-**Nothing has ever been viewed in a browser** — see [`HANDOFF.md`](./HANDOFF.md).
+**Current phase:** **Phase B complete.** All six feature slices are merged —
+**27 routes, 1058 tests**, every route walked in a browser. The rate-limit
+migration is applied to local Postgres and `enforceRateLimit()` has been
+verified end-to-end (20 requests pass, the 21st gets a 429).
+**Not yet pushed to `origin/main`** — see [`HANDOFF.md`](./HANDOFF.md).
 
 ---
 
@@ -95,7 +94,9 @@ Full requirements: [`PRD.md`](./PRD.md). Decisions: [`docs/adr/`](./docs/adr/).
 | Rate limiting    | Hashed IP, fixed window, shared Postgres counter, fails open       | [0013](./docs/adr/0013-rate-limiting-shared-store.md)                  |
 | Economy data     | Bulk price feeds only, server-rendered — never per-item upstream   | [0014](./docs/adr/0014-economy-bulk-only-data-access.md)               |
 | Combat maths     | Implemented from published formulas; tiered golden tests           | [0015](./docs/adr/0015-combat-engine-from-published-formulas.md)       |
+| Skilling rates   | Authored in-repo, versioned and sourced — no rates API exists      | [0016](./docs/adr/0016-authored-skilling-rates-in-repo.md)             |
 | Clue data        | Partial dataset; solvable clue types derived, not stored           | [0017](./docs/adr/0017-partial-clue-dataset-with-derivable-solvers.md) |
+| Quest data       | Authored requirement graph; completion is self-declared            | [0018](./docs/adr/0018-authored-quest-requirements-graph.md)           |
 | Authored rules   | Versioned, sourced, confidence-graded — never bare constants       | [0019](./docs/adr/0019-versioned-authored-game-rules.md)               |
 
 ### Consequences of "no auth" that are easy to forget
@@ -211,57 +212,57 @@ in commit **`5202810`**. If auth ever returns, recover rather than rewrite —
 
 ## Built so far
 
-| Module                    | Purpose                                                                            |
-| ------------------------- | ---------------------------------------------------------------------------------- |
-| `lib/api/osrs-fetch.ts`   | The only outbound chokepoint. User-Agent, per-source TTLs, `assertNoFanOut`        |
-| `lib/api/wom-group.ts`    | Clan roster / `gained` leaderboards / competitions. Typed against the real payload |
-| `lib/api/prices.ts`       | GE prices. Bulk `/latest` over per-item; `timestepForDays` enforces the 365 cap    |
-| `lib/api/wiki-bucket.ts`  | Static game data. `buildBucketQuery` is the injection boundary — never concatenate |
-| `lib/ratelimit/`          | `enforceRateLimit()` + shared Postgres counter. Store is swappable behind an iface |
-| `lib/clan/ranks.ts`       | Rank ordering from `roleOrders`. Pure, no network — **no hardcoded ladder**        |
-| `lib/utils/format-gp.ts`  | GP formatting; truncates towards zero so money is never overstated                 |
-| `lib/navigation/tools.ts` | Tool directory as data, so a dead landing-page link fails a test                   |
+| Module                        | Purpose                                                                            |
+| ----------------------------- | ---------------------------------------------------------------------------------- |
+| `lib/api/osrs-fetch.ts`       | The only outbound chokepoint. User-Agent, per-source TTLs, `assertNoFanOut`        |
+| `lib/api/wom-group.ts`        | Clan roster / `gained` leaderboards / competitions. Typed against the real payload |
+| `lib/api/prices.ts`           | GE prices. Bulk `/latest` over per-item; `timestepForDays` enforces the 365 cap    |
+| `lib/api/wiki-bucket.ts`      | Static game data. `buildBucketQuery` is the injection boundary — never concatenate |
+| `lib/ratelimit/`              | `enforceRateLimit()` + shared Postgres counter. Store is swappable behind an iface |
+| `lib/clan/ranks.ts`           | Rank ordering from `roleOrders`. Pure, no network — **no hardcoded ladder**        |
+| `lib/utils/format-gp.ts`      | GP formatting; truncates towards zero so money is never overstated                 |
+| `lib/utils/parse-quantity.ts` | Reads `1,000` / `13m` / `.5`. Shared core; each feature keeps its own limits       |
+| `lib/navigation/tools.ts`     | Tool directory as data. A dead link **and** an unadvertised route fail a test      |
 
-**Feature modules:** `lib/economy/`, `lib/combat/`, `lib/clues/`, `lib/utility/`
-— each owns its slice and its `src/app/<feature>/` segment.
+**Feature modules:** `lib/economy/`, `lib/combat/`, `lib/clues/`, `lib/utility/`,
+`lib/skilling/`, `lib/quests/` — each owns its slice and its
+`src/app/<feature>/` segment.
 
 **Atoms:** `Button`, `Input`, `Select`, `Table` (+ cells), `PriceTag`,
 `StatBadge`, plus per-slice components — check
 [`src/components/README.md`](./src/components/README.md) before writing a new
-one. ⚠️ **That inventory is out of date**: the four merged slices added
-components it does not list.
+one. It now carries a full per-slice inventory and a **known-duplication**
+section: three near-identical numeric fields and two `SelectField`s exist
+across slices. **Do not add a fourth.**
 
-600+ tests. The escaping and IP-spoofing tests encode behaviour verified against
+1058 tests. The escaping and IP-spoofing tests encode behaviour verified against
 live APIs; `ranks.test.ts` uses the real Void Reavers `roleOrders` fixture.
 
 ## Next tasks
 
-Ordered, and the first two are blocking. Full detail in [`HANDOFF.md`](./HANDOFF.md).
+Full detail in [`HANDOFF.md`](./HANDOFF.md).
 
-1. **Get a local Postgres up and apply the migration.** Blocks everything below.
-2. **Merge PR #4 (Skilling) and PR #6 (Quests)** — only safe once the migration
-   is applied, since both add anonymous proxies that rely on rate limiting.
-3. **Walk all 19 routes in a browser.** Nobody has. Four independently-built UIs
-   share a token system that has never been visually compared.
-4. **Finish the reconciliation pass** — the remaining items are promoting
-   `parse-quantity.ts` to `lib/utils/` and the `src/components/README.md`
-   inventory, both of which need #4 and #6 merged first.
-5. Then: **roster page** over `sortByRank`/`groupByRank`, surfacing
+1. **Push `main` and close PRs #4, #6, #9, #10.** The merges are local only.
+2. **Pin CI actions to commit SHAs** rather than `@v4`. The only outstanding
+   item that is a security issue rather than a feature — a mutable tag can be
+   repointed at code that runs in CI with `CRON_SECRET` and `DATABASE_URL`.
+   Carried over four handoffs now.
+3. **Roster page** over `sortByRank`/`groupByRank`, surfacing
    `player.updatedAt` so staleness is visible rather than implied.
-   **Pin CI actions to commit SHAs** (a mutable `@v4` tag can be repointed at
-   malicious code — carried over three handoffs now).
+4. **`pruneRateLimitCounters()` job** behind `CRON_SECRET`.
+5. **De-duplicate the numeric field** across combat/skilling/quests.
 
 ## Built, but not wired up
 
 - **`daily_snapshots` has no writer.** The table exists; nothing fills it.
-- **The rate-limit migration has never been applied to any database.**
-  `drizzle/0001_ordinary_multiple_man.sql` is unapplied, so `enforceRateLimit()`
-  **fails open on every call** — safe, but it is not rate limiting. This is what
-  blocks PRs #4 and #6.
 - **`rate_limit_counters` has no pruning job.** Wants a `CRON_SECRET`-protected
   `pruneRateLimitCounters()`; nothing breaks without it, the table just grows.
-- **`/api/health` is the only database consumer on `main`.** No merged page
-  touches Postgres, which is why all 19 routes render without a live one —
+- **The migration is applied _locally only_.** Any deployment starts from an
+  unmigrated database, and `enforceRateLimit()` fails open until it is applied
+  there — safe, but not rate limiting. `npm run db:migrate` reads `.env.local`
+  via `node --env-file-if-exists`; drizzle-kit does not read it on its own.
+- **Only `/api/health` and the two hiscores proxies touch Postgres.** No page
+  does, which is why every route renders without a live database —
   `DATABASE_URL` need only _parse_ as a URL to satisfy `getEnv()`.
 - **No clan/roster feature exists yet.** `wom-group.ts` and `ranks.ts` are
   tested but have no caller.

@@ -39,13 +39,10 @@ valuable part.
 | [0013](./adr/0013-rate-limiting-shared-store.md)                  | Rate limiting by hashed IP in shared Postgres | Accepted               |
 | [0014](./adr/0014-economy-bulk-only-data-access.md)               | Economy reads bulk price feeds only           | Accepted — amended     |
 | [0015](./adr/0015-combat-engine-from-published-formulas.md)       | Combat engine from published wiki formulas    | Accepted               |
-| 0016                                                              | _(Skilling — lands with PR #4)_               | **Not yet on `main`**  |
+| [0016](./adr/0016-authored-skilling-rates-in-repo.md)             | Authored skilling rates, versioned in-repo    | Accepted               |
 | [0017](./adr/0017-partial-clue-dataset-with-derivable-solvers.md) | Partial clue dataset; derivable solvers       | Accepted               |
-| 0018                                                              | _(Quests — lands with PR #6)_                 | **Not yet on `main`**  |
+| [0018](./adr/0018-authored-quest-requirements-graph.md)           | Authored quest requirement graph              | Accepted               |
 | [0019](./adr/0019-versioned-authored-game-rules.md)               | Versioned, sourced, confidence-graded rules   | Accepted               |
-
-Numbers **0016 and 0018 are reserved, not missing** — their ADRs exist on the
-unmerged `feat/skilling` and `feat/quests` branches. Do not reuse those numbers.
 
 **To add one:** copy [`0000-template.md`](./adr/0000-template.md), take the next
 number, and **add a row above in the same commit**. The `write-adr` skill

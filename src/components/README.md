@@ -28,19 +28,19 @@ Work down the list and stop at the first "yes".
 
 ### Worked examples from our feature catalog
 
-| Component                     | Layer        | Why                                                                  |
-| ----------------------------- | ------------ | -------------------------------------------------------------------- |
-| `PriceTag`                    | **Atom**     | Renders one value. Splitting it further leaves nothing               |
-| `StatBadge`                   | **Atom**     | A label/value pill. Used by combat, skilling and clan features alike |
-| `ItemSearchInput`             | **Atom**     | A styled input. The _dropdown_ makes it a molecule                   |
-| `PriceChangeIndicator`        | **Molecule** | `PriceTag` + `StatBadge`, one job: show movement                     |
-| `ItemPicker`                  | **Molecule** | Input + results list                                                 |
-| `ThemeToggle`                 | **Molecule** | Small, self-contained, interactive                                   |
-| `FeatureCard`                 | **Organism** | Stands alone; a grid of these _is_ the tool directory                |
-| `FlippingCalculatorForm`      | **Organism** | Owns inputs, calls domain logic, renders results                     |
-| `ClanLeaderboard`             | **Organism** | A complete page section over pre-aggregated data                     |
-| `CalculatorLayout`            | **Template** | Title/tool/notes slots. Fetches nothing                              |
-| `app/tools/flipping/page.tsx` | **Page**     | Fetches, authorises, composes                                        |
+| Component                       | Layer        | Why                                                                  |
+| ------------------------------- | ------------ | -------------------------------------------------------------------- |
+| `PriceTag`                      | **Atom**     | Renders one value. Splitting it further leaves nothing               |
+| `StatBadge`                     | **Atom**     | A label/value pill. Used by combat, skilling and clan features alike |
+| `ItemSearchInput`               | **Atom**     | A styled input. The _dropdown_ makes it a molecule                   |
+| `PriceChangeIndicator`          | **Molecule** | `PriceTag` + `StatBadge`, one job: show movement                     |
+| `ItemPicker`                    | **Molecule** | Input + results list                                                 |
+| `ThemeToggle`                   | **Molecule** | Small, self-contained, interactive                                   |
+| `FeatureCard`                   | **Organism** | Stands alone; a grid of these _is_ the tool directory                |
+| `FlippingCalculatorForm`        | **Organism** | Owns inputs, calls domain logic, renders results                     |
+| `ClanLeaderboard`               | **Organism** | A complete page section over pre-aggregated data                     |
+| `CalculatorLayout`              | **Template** | Title/tool/notes slots. Fetches nothing                              |
+| `app/economy/flipping/page.tsx` | **Page**     | Fetches, composes. (No auth to do — ADR-0012)                        |
 
 **The recurring judgement call** is molecule vs organism. Our tiebreaker: _would
 this appear in a design review as its own item?_ `ClanLeaderboard` yes,
@@ -84,6 +84,38 @@ not produce five slightly different inputs.
 
 If one of these is close but not quite right, extend it rather than forking it —
 a second near-identical input is how a token system quietly stops being one.
+
+### Per-slice components
+
+Each feature owns a `<slice>/` subfolder at the layer it needs. Check the
+shared table above **first** — these are here because they are genuinely
+feature-specific, not as a place to put a general component.
+
+| Slice        | Atoms       | Molecules                                             | Organisms                                                                                       |
+| ------------ | ----------- | ----------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| **Economy**  | `StatTile`  | `ItemSearchForm`, `LiquidityWarning`, `RangeSwitcher` | `AlchProfitTable`, `FlippingCalculator`, `ItemOverview`, `ItemPriceTable`, `PriceHistoryChart`  |
+| **Combat**   | —           | `NumberField`, `SelectField`                          | `DpsCalculator`, `DropRateCalculator`, `MaxHitCalculator`                                       |
+| **Clues**    | —           | `ClueStepCard`, `CoverageNotice`                      | `ClueSolver`, `CombatAchievementTracker`                                                        |
+| **Skilling** | —           | `NumericField`, `SelectField`                         | `AgilityCourseComparator`, `ConstructionCalculator`, `TrainingMethodComparator`, `XpCalculator` |
+| **Quests**   | —           | `BlockerList`, `LevelField`, `SelfReportedNotice`     | `DiaryChecker`, `LevelEntryPanel`, `ProfileBackup`, `QuestIndex`, `QuestPlanner`                |
+| **Utility**  | `Countdown` | `ResetCard`                                           | `DeathRiskCalculator`, `MinigamePointsCalculator`, `PrayerFlickTimer`, `ResetTracker`           |
+
+### ⚠️ Known convergent duplication
+
+Six agents building in parallel produced the same component more than once, and
+nothing failed as a result — which is why it needs writing down rather than
+assuming someone notices:
+
+- **Three numeric inputs**: `combat/NumberField`, `skilling/NumericField`,
+  `quests/LevelField`. All three exist because the shared `Input` atom renders
+  no label and does not parse shorthand.
+- **Two `SelectField`s**: `combat/` and `skilling/`, both wrapping the `Select`
+  atom with a label.
+
+This is the component-layer twin of the `parse-quantity` duplication already
+resolved in `lib/utils/`. The fix is the same shape — promote one labelled
+field to `molecules/`, delete the rest — but it touches five slices at once, so
+it is a deliberate follow-up, not a drive-by. **Do not add a fourth.**
 
 ## Adding a component
 
