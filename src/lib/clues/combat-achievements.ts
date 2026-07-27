@@ -1,5 +1,6 @@
 import 'server-only';
 import {
+  BUCKETS,
   firstNumber,
   firstValue,
   runBucketQuery,
@@ -27,12 +28,9 @@ export { CA_TIER_ORDER };
  * (`ca-progress.ts`, ADR-0012). This module supplies the questions, never the
  * answers.
  *
- * The bucket name is declared locally rather than added to `BUCKETS` in
- * `wiki-bucket.ts` only to keep this branch from colliding with the other
- * Phase B feature branches; promoting it is a merge-time tidy-up.
  */
 
-const COMBAT_ACHIEVEMENT_BUCKET = 'combat_achievement';
+const COMBAT_ACHIEVEMENT_BUCKET = BUCKETS.combatAchievement;
 
 /** Verified schema, 2026-07-26. Field names are not guessable — introspect. */
 const CA_FIELDS = ['id', 'name', 'monster', 'task', 'tier', 'type'] as const;

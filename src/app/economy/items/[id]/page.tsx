@@ -81,7 +81,7 @@ export default async function ItemPage({ params, searchParams }: PageProps) {
   return (
     <CalculatorLayout
       title={row.name}
-      className="max-w-5xl"
+      width="wide"
       notes={
         <ul className="list-disc space-y-1 pl-4">
           <li>
