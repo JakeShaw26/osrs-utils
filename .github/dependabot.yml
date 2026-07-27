@@ -40,6 +40,18 @@ updates:
       - dependency-name: eslint
         update-types:
           - version-update:semver-major
+
+      # Same shape of problem, one layer down. TypeScript 7.0 is the native port
+      # with a rewritten compiler API; `typescript-eslint` refuses to load
+      # against it outright ("does not support TS 7.0"), and Next's build stops
+      # recognising the compiler as installed at all. Both of ours fail, so this
+      # is a two-tool block, not a lint quirk.
+      #
+      # Tracking issue for TS >=7.1 support:
+      # https://github.com/typescript-eslint/typescript-eslint/issues/10940
+      - dependency-name: typescript
+        update-types:
+          - version-update:semver-major
     groups:
       # Patch and minor bumps land as one PR rather than fifteen. Majors stay
       # separate — those are the ones that need reading, and burying a Next.js
