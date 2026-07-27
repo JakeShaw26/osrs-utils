@@ -1,3 +1,5 @@
+import { parseQuantity as parseShorthand } from '@/lib/utils/parse-quantity';
+
 /**
  * Parses the shorthand OSRS players actually type into price fields.
  *
@@ -10,34 +12,20 @@
  *
  * Returns `null` for anything unparseable so the caller can distinguish "not
  * filled in yet" from "zero", which are different states in a calculator.
+ *
+ * The shorthand reading itself now lives in `lib/utils/parse-quantity.ts` —
+ * this feature and Skilling wrote the same parser independently. What stays
+ * here is what is specific to *money*: coins are whole, and a price of zero is
+ * not a price.
  */
 
-const SUFFIX_MULTIPLIERS: Record<string, number> = {
-  k: 1_000,
-  m: 1_000_000,
-  b: 1_000_000_000,
-};
-
 export function parseGp(raw: string | null | undefined): number | null {
-  if (raw === null || raw === undefined) return null;
-
-  // Strip separators and whitespace: thousands separators are display
-  // formatting, and both `,` and a non-breaking space arrive via copy-paste.
-  const cleaned = raw.replace(/[\s,_ ]/g, '').toLowerCase();
-  if (cleaned === '') return null;
-
-  const match = /^(-?\d*\.?\d+)([kmb]?)$/.exec(cleaned);
-  if (!match) return null;
-
-  const [, digits, suffix] = match;
-  const value = Number(digits);
-  if (!Number.isFinite(value)) return null;
-
-  const scaled = value * (suffix ? (SUFFIX_MULTIPLIERS[suffix] ?? 1) : 1);
+  const value = parseShorthand(raw);
+  if (value === null) return null;
 
   // GP is a whole number of coins. Truncate towards zero rather than rounding,
   // matching lib/utils/format-gp.ts — money is never overstated.
-  return Math.trunc(scaled);
+  return Math.trunc(value);
 }
 
 /**

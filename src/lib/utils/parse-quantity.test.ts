@@ -67,6 +67,21 @@ describe('parseQuantity', () => {
     expect(parseQuantity(Number.NaN)).toBeNull();
     expect(parseQuantity(Number.POSITIVE_INFINITY)).toBeNull();
   });
+
+  /**
+   * Pins the two behaviours that differed between the two parsers this module
+   * replaced, so the merge is asserted rather than assumed.
+   *
+   * Economy's accepted a leading dot and stripped underscores; Skilling's did
+   * neither. Taking the union is safe in that direction — every input either
+   * feature already accepted still parses to the same number — whereas taking
+   * the intersection would have silently started rejecting input that worked.
+   */
+  it('accepts the leading-dot and underscore forms the Economy parser allowed', () => {
+    expect(parseQuantity('.5')).toBe(0.5);
+    expect(parseQuantity('-.5')).toBe(-0.5);
+    expect(parseQuantity('1_000_000')).toBe(1_000_000);
+  });
 });
 
 describe('parseCount', () => {

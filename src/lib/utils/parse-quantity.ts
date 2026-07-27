@@ -1,5 +1,5 @@
 /**
- * Parses the numbers players actually type into a quantity field.
+ * Parses the numbers players actually type.
  *
  * WHY THIS EXISTS
  *
@@ -9,13 +9,22 @@
  * shorthand constantly, because the game itself renders "13,034,431" as "13M"
  * and its own quantity boxes accept `k`/`m`/`b`.
  *
- * So the inputs in this feature are `type="text"` with `inputMode="numeric"`
- * and this parser in front of them. That trades the native spinner for
- * accepting what people write, which is the better trade for a calculator.
+ * So the inputs across this app are `type="text"` with an appropriate
+ * `inputMode`, parsed here. That trades the native spinner for accepting what
+ * people write, which is the better trade for a calculator.
  *
- * Deliberately NOT in `lib/utils/`: five feature branches are in flight and a
- * shared-file collision is more expensive than a later move. Promoting this to
- * `lib/utils/parse-quantity.ts` is a good follow-up once the branches land.
+ * WHY IT LIVES IN `lib/utils/`
+ *
+ * It was written twice, independently, by two feature agents working in
+ * parallel — `lib/skilling/parse-quantity.ts` and the core of
+ * `lib/economy/parse-gp.ts`. Both were kept feature-local on purpose while six
+ * branches were in flight, because a shared-file collision would have cost more
+ * than a later move. The branches have landed, so this is that move.
+ *
+ * What is shared is the *reading* of shorthand. What is NOT shared is what each
+ * feature considers valid — GP truncates to whole coins, an item count cannot
+ * be fractional or negative, an XP total can be neither. Those restrictions
+ * stay with their features; only the parsing lives here.
  */
 
 /** `null` means "not a number I can read", distinct from a legitimate 0. */
@@ -28,15 +37,16 @@ const SUFFIX_MULTIPLIERS: Record<string, number> = {
 };
 
 /**
- * Reads `"1,000"`, `"1k"`, `"1.5m"`, `"13,034,431"`, `" 99 "` and `"2b"`.
+ * Reads `"1,000"`, `"1k"`, `"1.5m"`, `"13,034,431"`, `" 99 "`, `".5"` and `"2b"`.
  *
  * Rejects anything else — including `"1k5"`, `"1.2.3"` and `"abc"` — rather
  * than salvaging a leading digit. `parseFloat("12abc")` returns 12, which is
  * how a typo becomes a plausible-looking wrong answer instead of a visible
  * validation message.
  *
- * Negative values parse (the minus sign is accepted) so that callers can tell
- * "you typed -5" apart from "you typed nonsense" and phrase the error properly.
+ * Sign and fraction are PRESERVED here, deliberately. A caller that forbids
+ * them can tell "you typed -5" apart from "you typed nonsense" and phrase the
+ * error properly; a parser that returned null for both could not.
  */
 export function parseQuantity(raw: string | number | null | undefined): ParsedQuantity {
   if (typeof raw === 'number') return Number.isFinite(raw) ? raw : null;
@@ -45,10 +55,13 @@ export function parseQuantity(raw: string | number | null | undefined): ParsedQu
   // Strip separators players paste from the wiki or a spreadsheet. `\s` covers
   // the non-breaking and narrow no-break spaces that copying out of a rendered
   // table produces — they are invisible and would otherwise fail the match.
-  const cleaned = raw.trim().toLowerCase().replace(/[,\s]/g, '');
+  const cleaned = raw
+    .trim()
+    .toLowerCase()
+    .replace(/[,\s_]/g, '');
   if (cleaned === '') return null;
 
-  const match = /^(-?)(\d+(?:\.\d+)?)(k|m|b)?$/.exec(cleaned);
+  const match = /^(-?)(\d*\.?\d+)(k|m|b)?$/.exec(cleaned);
   if (!match) return null;
 
   const [, sign, digits, suffix] = match;

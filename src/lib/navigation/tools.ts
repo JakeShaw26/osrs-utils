@@ -98,6 +98,48 @@ export const TOOL_GROUPS: readonly ToolGroup[] = [
     ],
   },
   {
+    heading: 'Skilling',
+    href: '/skilling',
+    tools: [
+      {
+        title: 'XP Calculator',
+        description: 'XP and actions remaining to a target level, for any skill.',
+        href: '/skilling/xp',
+      },
+      {
+        title: 'Training Methods',
+        description: 'xp/hr and gp/xp per method, costed against live GE prices.',
+        href: '/skilling/methods',
+      },
+      {
+        title: 'Construction Costs',
+        description: 'An XP goal turned into a priced plank shopping list.',
+        href: '/skilling/construction',
+      },
+      {
+        title: 'Agility Courses',
+        description: 'Best course by level, with xp/hr and Marks of Grace rates.',
+        href: '/skilling/agility',
+      },
+    ],
+  },
+  {
+    heading: 'Quests',
+    href: '/quests',
+    tools: [
+      {
+        title: 'Quest Planner',
+        description: 'A completable quest order from your levels and what you have done.',
+        href: '/quests/planner',
+      },
+      {
+        title: 'Achievement Diaries',
+        description: 'Diary tasks by region and tier, against your current levels.',
+        href: '/quests/diaries',
+      },
+    ],
+  },
+  {
     heading: 'Utility',
     href: '/utility',
     tools: [

@@ -16,7 +16,7 @@ import { Input } from '@/components/atoms/Input';
  * NOT `type="number"`. Players paste `1,000` and type `13m`, both of which a
  * native number input discards, handing the caller an empty string that reads
  * as 0. `inputMode="numeric"` still raises the numeric keypad on a phone.
- * Parsing is `lib/skilling/parse-quantity.ts`.
+ * Parsing is `lib/utils/parse-quantity.ts`.
  */
 
 interface NumericFieldProps {

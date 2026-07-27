@@ -25,6 +25,14 @@ import { TOOL_GROUPS, allToolHrefs } from './tools';
 
 const APP_DIR = join(process.cwd(), 'src', 'app');
 
+/**
+ * Routes that legitimately belong to no tool group.
+ *
+ * Keep this list short and justified. Adding a route here to silence the
+ * "advertised" test below is how a feature quietly becomes unreachable.
+ */
+const EXEMPT_FROM_DIRECTORY = new Set<string>([]);
+
 /** Walks `src/app/` and returns every static route that has a `page.tsx`. */
 function discoverRoutes(dir: string = APP_DIR, prefix = ''): string[] {
   const routes: string[] = [];
@@ -70,6 +78,26 @@ describe('tool directory links', () => {
       expect(href.startsWith('/')).toBe(true);
       expect(href.endsWith('/')).toBe(false);
     }
+  });
+
+  it('advertises every feature route that exists', () => {
+    /**
+     * The reverse of the check above, and the one that was missing.
+     *
+     * `allToolHrefs()` → filesystem catches a link to a page that does not
+     * exist. It cannot catch a page that exists but is linked from nowhere —
+     * which is the likelier failure now that feature groups land as whole
+     * slices: /skilling and /quests each shipped five and three routes that the
+     * landing page said nothing about, and every existing test stayed green.
+     *
+     * A page nobody can navigate to is not shipped, however well it renders.
+     */
+    const advertised = new Set(allToolHrefs());
+    const featureRoutes = [...routes].filter(
+      (route) => route !== '/' && !EXEMPT_FROM_DIRECTORY.has(route),
+    );
+
+    expect(featureRoutes.filter((route) => !advertised.has(route))).toEqual([]);
   });
 
   it('nests every tool under its own group segment', () => {

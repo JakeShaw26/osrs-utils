@@ -15,7 +15,7 @@ import {
 import { NumericField } from '@/components/molecules/skilling/NumericField';
 import { SelectField } from '@/components/molecules/skilling/SelectField';
 import { planConstruction } from '@/lib/skilling/construction';
-import { formatCount, parseCount } from '@/lib/skilling/parse-quantity';
+import { formatCount, parseCount } from '@/lib/utils/parse-quantity';
 import type { ConstructionBuild, ItemPrices } from '@/lib/skilling/types';
 import { planXpGoal } from '@/lib/skilling/xp';
 

@@ -13,7 +13,7 @@ import {
 } from '@/components/atoms/Table';
 import { NumericField } from '@/components/molecules/skilling/NumericField';
 import { compareCourses } from '@/lib/skilling/agility';
-import { formatCount, parseCount } from '@/lib/skilling/parse-quantity';
+import { formatCount, parseCount } from '@/lib/utils/parse-quantity';
 import type { AgilityCourse } from '@/lib/skilling/types';
 import { levelForXp, planXpGoal, xpForLevel } from '@/lib/skilling/xp';
 

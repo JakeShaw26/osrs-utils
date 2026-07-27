@@ -15,7 +15,7 @@ import {
 } from '@/components/atoms/Table';
 import { NumericField } from '@/components/molecules/skilling/NumericField';
 import { SelectField } from '@/components/molecules/skilling/SelectField';
-import { formatCount, parseCount, parseQuantity } from '@/lib/skilling/parse-quantity';
+import { formatCount, parseCount, parseQuantity } from '@/lib/utils/parse-quantity';
 import {
   compareMethods,
   sortComparedMethods,
