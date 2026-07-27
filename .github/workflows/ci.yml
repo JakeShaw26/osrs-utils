@@ -5,8 +5,8 @@ on:
     branches: [main]
   pull_request:
 
-# Least privilege. The default GITHUB_TOKEN can WRITE to the repository; this
-# job only reads it. Narrowing here means a compromised dependency running in
+# Least privilege. The default GITHUB_TOKEN can WRITE to the repository; these
+# jobs only read it. Narrowing here means a compromised dependency running in
 # CI cannot push commits or move tags.
 permissions:
   contents: read
@@ -17,8 +17,23 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# THREE PARALLEL JOBS, NOT ONE SERIAL ONE.
+#
+# `npm run check` chains its steps with `&&`, so the first failure hides every
+# later one: lint fails, tests never run, and you learn about the test failure
+# on the *next* push. Two round trips for information one run could give you.
+#
+# Split, every category reports independently — and within a job, later steps
+# use `!cancelled()` so a type error does not hide a formatting error either.
+# The cost is one `npm ci` per job instead of one per run; the cache makes that
+# cheap, and wall-clock time is now the slowest job rather than the sum.
+#
+# `npm run check` still exists and is still the right thing to run locally.
+# `src/test/ci-workflow.test.ts` asserts the two cannot drift apart.
+
 jobs:
-  check:
+  quality:
+    name: types, lint, format
     runs-on: ubuntu-latest
     steps:
       # SUPPLY CHAIN: pinned to full commit SHAs, not tags.
@@ -28,17 +43,16 @@ jobs:
       # that up on the next run with no diff, no review and no notification. A
       # commit SHA is immutable — the content is fixed by the hash itself.
       #
-      # That matters here because these steps run in the same job as `npm ci`
-      # and `npm run build`, and CI is where CRON_SECRET and DATABASE_URL live
-      # once this repo deploys. A moved tag is arbitrary code execution with
-      # access to them. This is the tj-actions/changed-files compromise of March
-      # 2025 in one line, where a retagged action leaked secrets from tens of
-      # thousands of repositories.
+      # That matters here because these jobs run `npm ci` and `npm run build`,
+      # and CI is where CRON_SECRET and DATABASE_URL live once this repo
+      # deploys. A moved tag is arbitrary code execution with access to them.
+      # This is the tj-actions/changed-files compromise of March 2025 in one
+      # line, where a retagged action leaked secrets from tens of thousands of
+      # repositories.
       #
       # The trailing comment is the human-readable version — keep it accurate
       # when bumping, because the SHA alone is unreadable. `../dependabot.yml`
-      # updates both together, which is the half of this change that stops a
-      # pin from quietly going stale.
+      # updates both together, which is the half that stops a pin going stale.
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
@@ -51,7 +65,48 @@ jobs:
       # resolve new versions, so CI would stop testing what you actually ship.
       - run: npm ci
 
-      - run: npm run check
+      # Grouped because all three are seconds long and share one install.
+      # `!cancelled()` rather than `always()`: a real failure still reports the
+      # remaining checks, but hitting cancel actually cancels.
+      - run: npm run typecheck
+
+      - if: ${{ !cancelled() }}
+        run: npm run lint
+
+      - if: ${{ !cancelled() }}
+        run: npm run format:check
+
+  test:
+    name: tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      # NO DATABASE HERE, so `postgres-store.live.test.ts` skips rather than
+      # fails — it runs only when DATABASE_URL is loopback. That means the
+      # rate-limiter SQL is verified locally (`npm run test:db`) and NOT here.
+      # A Postgres service container would close that gap.
+      - run: npm run test
+
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
 
       # NO SECRETS ARE SET FOR THIS JOB, DELIBERATELY.
       #
@@ -63,3 +118,28 @@ jobs:
       # If this step starts failing, something began reading env at import time.
       # Fix the import, do not add secrets to make it pass.
       - run: npm run build
+
+  # One job to require in branch protection.
+  #
+  # With three parallel jobs, protecting `main` means naming all three — and a
+  # job added later is NOT required until someone remembers to add it, which is
+  # a protection gap that looks like protection. Requiring only `ci` means a new
+  # job is covered the moment it joins `needs`.
+  ci:
+    name: ci
+    runs-on: ubuntu-latest
+    needs: [quality, test, build]
+    if: ${{ always() }}
+    steps:
+      # `needs` alone does not fail this job when a dependency fails — with
+      # `always()` it runs regardless, so the result must be checked explicitly.
+      # Skipped counts as failure too: it means a dependency never ran.
+      - if: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped') }}
+        run: |
+          echo "A required job did not succeed:"
+          echo "  quality=${{ needs.quality.result }}"
+          echo "  test=${{ needs.test.result }}"
+          echo "  build=${{ needs.build.result }}"
+          exit 1
+
+      - run: echo "All checks passed."
