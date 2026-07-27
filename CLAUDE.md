@@ -4,11 +4,11 @@ Loaded into every AI session. **Keep under ~200 lines** or it stops being read.
 Updating this is part of the definition of done for any architectural change.
 
 **Last updated:** 2026-07-27
-**Current phase:** **Phase B complete.** All six feature slices are merged —
-**27 routes, 1058 tests**, every route walked in a browser. The rate-limit
-migration is applied to local Postgres and `enforceRateLimit()` has been
-verified end-to-end (20 requests pass, the 21st gets a 429).
-**Not yet pushed to `origin/main`** — see [`HANDOFF.md`](./HANDOFF.md).
+**Current phase:** **Phase B complete and pushed.** All six feature slices are
+on `origin/main` — **27 routes, 1065 tests**, every route walked in a browser,
+CI green. The rate-limit migration is applied to local Postgres and
+`enforceRateLimit()` is verified end-to-end (20 requests pass, the 21st gets a
+429). Nothing is blocked — see [`HANDOFF.md`](./HANDOFF.md).
 
 ---
 
@@ -235,23 +235,36 @@ one. It now carries a full per-slice inventory and a **known-duplication**
 section: three near-identical numeric fields and two `SelectField`s exist
 across slices. **Do not add a fourth.**
 
-1058 tests. The escaping and IP-spoofing tests encode behaviour verified against
+1065 tests. The escaping and IP-spoofing tests encode behaviour verified against
 live APIs; `ranks.test.ts` uses the real Void Reavers `roleOrders` fixture.
 
 ## Next tasks
 
-Full detail in [`HANDOFF.md`](./HANDOFF.md).
+Nothing is blocking. Full detail in [`HANDOFF.md`](./HANDOFF.md).
 
-1. **Push `main` and close PRs #4, #6, #9, #10.** The merges are local only.
-2. **Roster page** over `sortByRank`/`groupByRank`, surfacing
+1. **Roster page** over `sortByRank`/`groupByRank`, surfacing
    `player.updatedAt` so staleness is visible rather than implied.
-3. **`pruneRateLimitCounters()` job** behind `CRON_SECRET`.
-4. **De-duplicate the numeric field** across combat/skilling/quests.
+2. **`pruneRateLimitCounters()` job** behind `CRON_SECRET`.
+3. **De-duplicate the numeric field** across combat/skilling/quests.
+4. **Postgres service container in the CI `test` job** — the rate-limiter SQL
+   fails _open_, so it fails silently, and it is verified only locally today.
 
-**CI actions are pinned to commit SHAs** (done 2026-07-27) — `@v4` is mutable
-and CI is where `CRON_SECRET` and `DATABASE_URL` will live. Keep the trailing
-`# v4.4.0` comment accurate when bumping; `.github/dependabot.yml` moves both
-together. **Never reintroduce a bare tag**, including in a new workflow.
+## CI
+
+Four jobs: `quality` / `test` / `build` run in parallel, and a `ci` gate
+job requires all three — **branch protection should require `ci` alone**, so a
+job added later is covered the moment it joins `needs`.
+
+- **Actions are pinned to commit SHAs**, never tags. `@v4` is mutable, and CI is
+  where `CRON_SECRET` and `DATABASE_URL` will live. Keep the trailing `# v4.4.0`
+  comment accurate when bumping; `.github/dependabot.yml` moves both together.
+  **Never reintroduce a bare tag**, including in a new workflow.
+- **CI lists the scripts individually rather than running `npm run check`.**
+  `src/test/ci-workflow.test.ts` asserts the two cannot drift — add a step to
+  `check` without adding it to CI and that test fails.
+- **The `build` job runs with no secrets on purpose** — it is the regression
+  test for hard rule #2. If it fails, something started reading env at import
+  time. Fix the import; do not add secrets.
 
 ## Built, but not wired up
 

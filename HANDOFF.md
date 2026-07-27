@@ -5,20 +5,22 @@ read that first; this file covers what just happened and what to do next.
 
 This replaces the morning handoff, which ended at "reboot the machine".
 
-> ## ⏸️ Resume point: **push `main`.**
+> ## ✅ Resume point: nothing is blocked
 >
-> Everything below is committed **locally only** — `git log origin/main..main`.
-> PRs #4, #6, #9 and #10 are still open on GitHub even though their content is
-> merged here. Nothing else is blocked.
+> Phase B is closed. Pick whatever you like from [Next steps](#next-steps).
 >
-> Start Postgres first if it is not running: `npm run db:up`.
+> `main` is pushed. PRs #4, #6, #9 and #10 all show **MERGED** — GitHub matched
+> the commits, so none needed closing by hand. CI is green on the first run of
+> the split workflow.
+>
+> Start Postgres before doing anything database-shaped: `npm run db:up`.
 
 ---
 
 ## Executive summary
 
 **Phase B is complete.** All six feature slices are on `main` — **27 routes,
-1058 tests** — and the two things that had never happened in this project both
+1065 tests** — and the two things that had never happened in this project both
 happened today: a database exists, and the rate limiter has actually limited
 something.
 
@@ -42,23 +44,32 @@ table, and nothing in the suite would have noticed if it were broken.
 
 ## What shipped
 
-`main` is ahead of `origin/main` and unpushed. `npm run check` green, `next
-build` green, all 27 routes return 200.
+All six slices are on `origin/main`. `npm run check` green, `next build` green,
+all 27 routes return 200, **CI green on GitHub**.
 
-| Slice        | PR  | State                 | Routes                                                   |
-| ------------ | --- | --------------------- | -------------------------------------------------------- |
-| **Utility**  | #5  | ✅ on `main`          | `/utility` + resets, prayer-flick, death-risk, minigames |
-| **Economy**  | #2  | ✅ on `main`          | `/economy` + prices, items/[id], high-alch, flipping     |
-| **Clues**    | #3  | ✅ on `main`          | `/clues` + solver, combat-achievements, collection-log   |
-| **Combat**   | #7  | ✅ on `main`          | `/combat` + max-hit, dps, drop-rate                      |
-| **Skilling** | #4  | ✅ merged **locally** | `/skilling` + xp, methods, construction, agility, + API  |
-| **Quests**   | #6  | ✅ merged **locally** | `/quests` + planner, diaries, + API                      |
+| Slice        | PR  | State     | Routes                                                   |
+| ------------ | --- | --------- | -------------------------------------------------------- |
+| **Utility**  | #5  | ✅ merged | `/utility` + resets, prayer-flick, death-risk, minigames |
+| **Economy**  | #2  | ✅ merged | `/economy` + prices, items/[id], high-alch, flipping     |
+| **Clues**    | #3  | ✅ merged | `/clues` + solver, combat-achievements, collection-log   |
+| **Combat**   | #7  | ✅ merged | `/combat` + max-hit, dps, drop-rate                      |
+| **Skilling** | #4  | ✅ merged | `/skilling` + xp, methods, construction, agility, + API  |
+| **Quests**   | #6  | ✅ merged | `/quests` + planner, diaries, + API                      |
 
-| PR  | State                 | What                                           |
-| --- | --------------------- | ---------------------------------------------- |
-| #8  | ✅ on `main`          | Fix: Economy pages were an open proxy          |
-| #9  | ✅ merged **locally** | Local Postgres via Docker Compose + driver fix |
-| #10 | ✅ merged **locally** | Phase B reconciliation + the first route walk  |
+| PR  | State     | What                                           |
+| --- | --------- | ---------------------------------------------- |
+| #8  | ✅ merged | Fix: Economy pages were an open proxy          |
+| #9  | ✅ merged | Local Postgres via Docker Compose + driver fix |
+| #10 | ✅ merged | Phase B reconciliation + the first route walk  |
+
+**First run of the split CI, all four jobs green** (run `30310697787`):
+`types, lint, format` 61s · `build` 53s · `tests` 91s · `ci` gate 4s. The three
+run in parallel, so wall clock is the slowest job plus the gate, not the sum.
+
+⚠️ **Dependabot immediately opened #11 and #12**, bumping `actions/checkout` and
+`actions/setup-node` to **v7**. That is the config working as intended, and it
+is also the major-version upgrade deliberately deferred when pinning — v5+
+change the action runtime. Review them as a real upgrade, not a rubber stamp.
 
 ---
 
@@ -170,17 +181,16 @@ it they prerender and fetch the GE during the build.
 
 ## Next steps
 
-### 1. Push, and close the PRs (~10 min)
+**Nothing here is blocking, and nothing depends on anything else.** Phase B is
+closed; this is a menu, in rough value order.
 
-The four open PRs contain content already merged
-locally, so closing them after the push is the tidy end state.
+### First, if you touch CI
 
-**The local merges were done with `git merge`, not through GitHub**, because
-the PR-merge action was blocked in this session. If you would rather have the
-merge commits GitHub generates, reset to `origin/main` and merge through the UI
-instead — the content is identical either way.
+Dependabot PRs **#11 and #12** are open, proposing `actions/checkout` and
+`actions/setup-node` v7. Read them as a real major upgrade — v5+ changed the
+action runtime — rather than merging on green.
 
-### 2. Then pick from these
+### Then pick from these
 
 - **Roster page.** The highest-value thing not yet built: `sortByRank` /
   `groupByRank` over the WOM group, surfacing `player.updatedAt` so staleness is
@@ -192,6 +202,11 @@ instead — the content is identical either way.
 - **Drop-table feature**, now that V9b is answerable.
 - **Deployment.** Nothing is deployed, and the migration is applied to the local
   database only. Whatever host is chosen starts from an unmigrated database.
+  Blocked on **V13** (free-tier cron limits and hosting cost) more than on code.
+- **A Postgres service container in the `test` job.** `postgres-store.live.test.ts`
+  skips in CI because there is no database there, so the rate-limiter SQL — the
+  one thing that fails _open_ and therefore fails silently — is verified only on
+  a developer machine. This is the largest remaining hole in the CI story.
 
 ---
 
