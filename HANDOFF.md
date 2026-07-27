@@ -1,9 +1,19 @@
-# Handoff — 2026-07-26 (end of day)
+# Handoff — 2026-07-27
 
 Snapshot for picking this up cold. **Living context is [`CLAUDE.md`](./CLAUDE.md)** —
 read that first; this file covers what just happened and what to do next.
 
 This replaces the Phase A handoff. Rewrite it again when Phase B closes.
+
+> ## ⏸️ Resume point: **reboot the machine.**
+>
+> Docker Desktop and WSL are both installed; WSL needs a restart to activate,
+> and a `CBS RebootPending` flag from the Docker install clears in the same
+> reboot. After it: launch Docker Desktop, wait for the whale to settle, and
+> confirm with `docker info` — it should print a server version.
+>
+> Everything that does **not** need a database is already done. Jump to
+> [Next steps](#next-steps).
 
 ---
 
@@ -25,15 +35,24 @@ defect. Those are the interesting part of the day and are detailed below.
 **Three open questions were resolved as a side effect of building:** V3 (GE tax),
 V9 (quest requirements are extractable), V9b (a drop-table bucket does exist).
 
-**The one thing that did not get done is anything requiring a database.** That
-is now unblocked in code but not yet executed — see [Start here tomorrow](#start-here-tomorrow).
+**The one thing still not done is anything requiring a database.** On 2026-07-27
+everything that does _not_ need one was cleared in PR #10 — the app was run and
+walked for the first time, and the reconciliation pass landed apart from the two
+items that genuinely depend on #4 and #6 merging. The database itself is one
+reboot away. See [Next steps](#next-steps).
+
+**Useful thing learned while unblocking it:** `DATABASE_URL` only has to _parse_
+as a URL. `/api/health` is the only database consumer on `main`, so all 19 routes
+render without a live Postgres — `getEnv()` validates the whole schema at once,
+which is why an empty `.env.local` broke every page rather than only the
+database-backed ones. That decoupling is what let the browser walk happen first.
 
 ---
 
 ## What shipped
 
-`main` is at `a17a2ff`. **580 tests, 51 files.** `npm run check` green, secret-free
-`next build` green.
+`main` is at `a17a2ff`; PR #10 adds the reconciliation on top. **640 tests, 53
+files** on that branch. `npm run check` green, secret-free `next build` green.
 
 | Slice        | PR  | State     | Routes                                                        |
 | ------------ | --- | --------- | ------------------------------------------------------------- |
@@ -44,12 +63,13 @@ is now unblocked in code but not yet executed — see [Start here tomorrow](#sta
 | **Skilling** | #4  | 🔶 open   | `/skilling` + xp, methods, construction, agility, + API route |
 | **Quests**   | #6  | 🔶 open   | `/quests` + planner, diaries, + API route                     |
 
-Plus two infrastructure PRs:
+Plus three infrastructure PRs:
 
 | PR  | State     | What                                                           |
 | --- | --------- | -------------------------------------------------------------- |
 | #8  | ✅ merged | Fix: Economy pages were an open proxy (see below)              |
 | #9  | 🔶 open   | Local Postgres via Docker Compose + a driver that can reach it |
+| #10 | 🔶 open   | Phase B reconciliation + the route walk (2026-07-27)           |
 
 ### Also landed directly on `main` (not via PR)
 
@@ -139,105 +159,121 @@ Neon for anything else.
 
 ---
 
-## Start here tomorrow
+## Done on 2026-07-27 (PR #10)
 
-### Step 1 — Get the database running (~20 min, blocks everything else)
+Everything that did not require a database. Recorded here so it is not redone.
 
-This is the only thing standing between here and a finished Phase B.
+- **`.env.local` is populated and working** — it was 0 bytes, which is why
+  `getEnv()` threw on every page. Not committed (gitignored); if it goes missing,
+  regenerate from [`.env.example`](./.env.example).
+- **Step 3, the browser walk, is done.** See [Route walk](#route-walk-findings).
+- **Reconciliation items 1–5 and 8 are done.** Items **6 and 7** remain and are
+  listed under [Next steps](#next-steps) — both genuinely need #4 and #6 merged.
+- **Docker Desktop and WSL are installed.** Reboot pending.
 
-1. **Install Docker Desktop.** The winget install failed on an interactive UAC
-   prompt that a background process cannot accept, so run it yourself:
+### Route walk findings
 
-   ```
-   winget install --id Docker.DockerDesktop --accept-source-agreements --accept-package-agreements
-   ```
+All 19 routes return **200**, each with exactly one `<h1>`, and
+`/economy/prices` fetched live data the OSRS Wiki accepted — the first live
+upstream request this project has made. Three defects, all of which **render
+fine and fail no test**:
 
-   Accept the prompt, then **launch Docker Desktop and wait for it to settle.**
-   `docker info` should print a server version.
+1. **The landing page linked to six routes that do not exist** (`/tools/*`).
+   Fixed, and the directory moved to `lib/navigation/tools.ts` as data so
+   `tools.test.ts` can check every href against the filesystem.
+2. **`CalculatorLayout`'s width override only worked in one direction.** `cn()`
+   joins without merging, so `className="max-w-6xl"` shipped **both**
+   `max-w-4xl` and `max-w-6xl`, leaving CSS source order to pick. Measured:
+   `.max-w-2xl` (10940) < `.max-w-4xl` (10997) < `.max-w-6xl` (11111) — widening
+   won by accident, narrowing was silently ignored. Now a `width` prop.
+3. **`/` had no `<main>` landmark.** `layout.tsx` is `<body>{children}</body>`,
+   so pages supply their own; the landing page used a bare `<div>`.
 
-2. **Check out PR #9** (`chore/local-postgres`) — it has the compose file and the
-   driver fix. Merge it, or work on the branch.
+Heading rhythm was also drifting — `/` and `/economy` used `text-3xl` with no
+mobile step-down while 13 other pages used `text-2xl sm:text-3xl`, so Economy's
+heading was visibly larger on a phone. Normalised.
 
-3. **Populate `.env.local`.** It is currently **0 bytes**. Copy from
-   [`.env.example`](./.env.example); only four values are required and
-   `WOM_GROUP_ID` is already correct. The database pair needs no editing:
+**The pattern worth carrying forward:** all three are _absences or accidents_,
+not wrong logic — the same shape as the `force-dynamic` open proxy. The new
+guards therefore read the **filesystem** and the **stylesheet**, not the
+components. A guard that reads from the same source as the code it guards proves
+nothing; a rendering test asserting `href="/tools/prices"` would have passed.
 
-   ```
-   DATABASE_URL="postgresql://osrs:localdev@localhost:5432/osrs"
-   DATABASE_URL_UNPOOLED="postgresql://osrs:localdev@localhost:5432/osrs"
-   ```
+---
 
-   `CRON_SECRET` needs ≥16 chars; `OSRS_API_USER_AGENT` must describe the app and
-   include contact info, or the Wiki blocks us.
+## Next steps
 
-4. **Start it and apply the migration:**
+### 0. Reboot (blocks step 1 only)
 
-   ```bash
-   npm run db:up        # waits for readiness, so the next line cannot race it
-   npm run db:migrate
-   npm run db:psql      # then \dt — expect rate_limit_counters
-   ```
+WSL is installed but inactive until restart, and a `CBS RebootPending` flag from
+the Docker install clears at the same time. Then launch Docker Desktop and check
+`docker info` prints a server version.
 
-   `drizzle/0001_ordinary_multiple_man.sql` has **never been applied to any
-   database**. Until it is, `enforceRateLimit()` fails open on every call —
-   which is safe, but it is not rate limiting.
+> **Why Docker needed WSL at all:** Docker Desktop does not run containers
+> directly on Windows — it runs a Linux VM, and WSL2 is its backend. With WSL
+> missing it reports **"virtualization support not detected"**, which reads like
+> a hardware fault and is not one. The CPU (Ryzen 5 5600H) and BIOS were fine
+> throughout.
 
-5. **Full details:** [`docs/local-database.md`](./docs/local-database.md).
+### 1. Database, then the two blocked PRs (~45 min)
 
-### Step 2 — Merge the two blocked PRs (~30 min)
+```bash
+npm run db:up        # waits for readiness, so the next line cannot race it
+npm run db:migrate
+npm run db:psql      # then \dt — expect rate_limit_counters
+```
 
-**#4 `feat/skilling`** and **#6 `feat/quests`** are the two that add
-`enforceRateLimit()`-gated proxies to Jagex. They were deliberately held back:
-merging them before the migration puts an unprotected anonymous proxy on `main`.
-Once step 1 is done they are unblocked.
+Merge **#9** first (`chore/local-postgres`) — it has the compose file _and_ the
+driver fix. `@neondatabase/serverless` sends queries as HTTP to Neon's endpoint
+and does not speak the Postgres wire protocol, so installing Postgres was never
+going to be sufficient on its own.
 
-Both were CI-green when opened, but `main` has moved a long way since. **Expect
-to re-run `npm run check` after each merge**, and note that #4 and #6 have never
+`drizzle/0001_ordinary_multiple_man.sql` has **never been applied to any
+database**. Until it is, `enforceRateLimit()` fails open on every call — safe,
+but not rate limiting. That is exactly why **#4 `feat/skilling`** and **#6
+`feat/quests`** are held back: both add `enforceRateLimit()`-gated anonymous
+proxies to Jagex, and merging them first puts an unprotected one on `main`.
+
+**Re-run `npm run check` after _each_ merge, not just at the end.** Both were
+CI-green when opened, but `main` has moved a long way, and #4 and #6 have never
 been tested against each other — they are the only two branches that both add
 route handlers.
 
-### Step 3 — Look at it in a browser (~30 min, do not skip)
+Full details: [`docs/local-database.md`](./docs/local-database.md).
 
-**Nobody has seen any of this rendered.** Every agent verified data and logic;
-`.env.local` was empty, so `getEnv()` threw and no page could load. Four
-independently-built feature UIs share a token system, but **visual consistency
-has never been checked and no test covers it.**
+### 2. Finish reconciliation (~30 min, needs step 1)
 
-```bash
-npm run dev
-```
+| #   | Item                                                                                                                                                     |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 6   | **Promote `parse-quantity.ts`** from `lib/skilling/` to `lib/utils/`. Kept feature-local to avoid a five-way collision; Economy and Combat both want it. |
+| 7   | **`src/components/README.md`** — inventory rows for the new components across all six slices.                                                            |
 
-Walk all 19 routes. Expect seams: heading rhythm, table density, empty-state
-wording, spacing between the four slices.
+Also then: **ADR index rows for 0016 and 0018.** They are currently marked
+_reserved, not missing_ in [`docs/README.md`](./docs/README.md) — the files exist
+only on the two unmerged branches. Do not reuse those numbers.
 
-### Step 4 — The reconciliation pass (~1–2 hrs)
+Re-run the walk once `/skilling/*` and `/quests/*` land, and **add their routes
+to `lib/navigation/tools.ts`** — `tools.test.ts` checks that every advertised
+link resolves, but nothing forces a _new_ route to be advertised.
 
-Deliberately deferred so six agents would not collide on the same lines. Do it as
-one PR **after** steps 1–2, because most items reference files that only exist
-once everything is merged.
+### 3. Then Phase B is closed — rewrite this file
 
-| #   | Item                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | **ADR index rows for 0014–0019.** Six new ADR files exist with no index entry.                                                                                                                                                                                                                                                                                                                                        |
-| 2   | **`src/app/page.tsx` links to `/tools/*`** — placeholder routes that do not exist. Real routes are `/economy/*`, `/combat/*`, `/clues/*`, `/utility/*`, and after step 2, `/skilling/*` and `/quests/*`. **The landing page is currently broken.**                                                                                                                                                                    |
-| 3   | **`CLAUDE.md` "Verified API facts"** — the bucket list is wrong (see finding 2). Add: `range_defence_bonus` is null on all 3,234 monster rows; `infobox_bonuses` returns an all-zero duplicate row for degraded Barrows gear; imbued salve pages are `Salve amulet(i)`, no space; the `quest` bucket's prose embeds `<span class="scp" data-skill=… data-level=…>` markup, which is how requirements are extractable. |
-| 4   | **`CLAUDE.md` "nothing renders any `lib/api` client"** — stale. Several features now do.                                                                                                                                                                                                                                                                                                                              |
-| 5   | **Strike V3, V9, V9b** from the open-questions tables in `CLAUDE.md` and this file. Add settled-decision rows for ADR-0014…0019.                                                                                                                                                                                                                                                                                      |
-| 6   | **Promote `parse-quantity.ts`** from `lib/skilling/` to `lib/utils/`. Kept feature-local to avoid a five-way collision; Economy and Combat both want it.                                                                                                                                                                                                                                                              |
-| 7   | **`src/components/README.md`** — inventory rows for the new components across all six slices.                                                                                                                                                                                                                                                                                                                         |
-| 8   | **Promote `combat_achievement`** into `BUCKETS` in `lib/api/wiki-bucket.ts` (declared locally by Clues to avoid a collision).                                                                                                                                                                                                                                                                                         |
+### 4. Then pick from these
 
-### Step 5 — Then pick from these
-
+- **Pin CI actions to commit SHAs** rather than `@v4`. _(Carried over from the
+  last three handoffs.)_ This is the only outstanding item that is a security
+  issue rather than a feature: `@v4` is a **mutable** tag, so whoever controls
+  the action can repoint it at code that runs in CI with access to `CRON_SECRET`
+  and `DATABASE_URL`. Ten-minute change.
 - **Roster page.** The highest-value thing not yet built: `sortByRank` /
   `groupByRank` over the WOM group, surfacing `player.updatedAt` so staleness is
   visible rather than implied. One request, no fan-out.
 - **`pruneRateLimitCounters()` job**, behind `CRON_SECRET`. Nothing breaks
   without it; the table just grows.
-- **Pin CI actions to commit SHAs** rather than `@v4`. A mutable tag can be
-  repointed at malicious code. _(Carried over from the last two handoffs — still
-  not done.)_
 - **Drop-table feature**, now that V9b is answerable (finding 2).
+- **Index-page widths.** `/combat` and `/utility` sit at `max-w-4xl`, the rest at
+  `5xl`. Left alone deliberately — those have two-column grids where narrower is
+  defensible, so it is a judgement call rather than drift.
 
 ---
 
@@ -262,7 +298,25 @@ the Wiki 2026-07-26; encoded in one constants module with provenance.
 
 ## Gotchas — including new ones from this session
 
-**New:**
+**New on 2026-07-27:**
+
+- **`cn()` joins classes, it does not merge them** (deliberately — see
+  `lib/utils/cn.ts`). Passing a `max-w-*` through `className` to a component that
+  already sets one ships both, and **CSS source order decides, not argument
+  order**. Tailwind emits utilities in ascending scale order, so overrides that
+  widen appear to work and overrides that narrow are silently ignored. Prefer a
+  named prop over a class when a component owns that property.
+- **`getEnv()` validates the entire schema on first call**, so a page that
+  touches nothing but the Wiki still requires `DATABASE_URL` to be present and
+  parseable. All-or-nothing is intentional (fail loudly), but it means one
+  missing variable breaks every route, not the related ones.
+- **`app/layout.tsx` provides no `<main>`** — every page must render its own, or
+  use `CalculatorLayout`, which does. `page-conventions.test.ts` enforces this.
+- **Docker Desktop on Windows needs WSL2**, and says
+  _"virtualization support not detected"_ when it is missing — which reads like
+  a CPU/BIOS fault and usually is not. Check `wsl --status` before touching BIOS.
+
+**New on 2026-07-26:**
 
 - **`force-dynamic` is not a caching-neutral flag.** It disables the fetch data
   cache. Use `fetchCache = 'default-cache'` + `connection()`. Lint enforces this
@@ -312,4 +366,12 @@ and caught real bugs in all three. **Ask for it explicitly next time.**
 **The honest limitation:** every agent verified data and logic, none could
 verify rendering, and the one defect that reached `main` was invisible to tests
 and visible in the build output. Parallel agents scale code production, not
-review. Step 3 exists because of this.
+review.
+
+**Confirmed on 2026-07-27.** The walk found three more defects, and every one was
+an _absence_ — a missing route, a missing landmark, a missing merge in a class
+joiner. None broke a test; all rendered fine. The generalisable fix is not "test
+the UI more" but **make the guard read a different source than the code it
+guards**: the filesystem for routes, the generated stylesheet for CSS
+precedence. A test that reads the component can only confirm the component says
+what it says.
