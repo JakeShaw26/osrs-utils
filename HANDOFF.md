@@ -7,9 +7,9 @@ This replaces the morning handoff, which ended at "reboot the machine".
 
 > ## ⏸️ Resume point: **push `main`.**
 >
-> Everything below is committed **locally only**. `main` is 14 commits ahead of
-> `origin/main`, and PRs #4, #6, #9 and #10 are still open on GitHub even though
-> their content is merged here. Nothing else is blocked.
+> Everything below is committed **locally only** — `git log origin/main..main`.
+> PRs #4, #6, #9 and #10 are still open on GitHub even though their content is
+> merged here. Nothing else is blocked.
 >
 > Start Postgres first if it is not running: `npm run db:up`.
 
@@ -42,7 +42,7 @@ table, and nothing in the suite would have noticed if it were broken.
 
 ## What shipped
 
-`main` is at 14 commits ahead of `origin/main`. `npm run check` green, `next
+`main` is ahead of `origin/main` and unpushed. `npm run check` green, `next
 build` green, all 27 routes return 200.
 
 | Slice        | PR  | State                 | Routes                                                   |
@@ -156,7 +156,7 @@ it they prerender and fetch the GE during the build.
 
 ### 1. Push, and close the PRs (~10 min)
 
-`main` is 14 commits ahead. The four open PRs contain content already merged
+The four open PRs contain content already merged
 locally, so closing them after the push is the tidy end state.
 
 **The local merges were done with `git merge`, not through GitHub**, because
