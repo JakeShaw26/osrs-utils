@@ -17,15 +17,32 @@ import { windowStartFor, type RateLimitRule } from './types';
  * limited anything is indistinguishable from one that works — from the outside,
  * both return 200. So this asserts against the real table.
  *
- * OPT-IN, not skipped-by-accident. It runs only when DATABASE_URL points at
- * loopback, so `npm test` in CI (no database, no env) skips it rather than
- * failing. Run it with `npm run test:db`, which loads .env.local.
+ * SKIPS LOCALLY WITHOUT A DATABASE, FAILS IN CI WITHOUT ONE.
+ *
+ * It runs when DATABASE_URL points at loopback, so a developer with no
+ * container gets a skip rather than a wall of connection errors — run it with
+ * `npm run test:db`, which loads `.env.local`.
+ *
+ * In CI that leniency would defeat the purpose. A skipped test reports as
+ * success, so removing the Postgres service block from the workflow would drop
+ * this coverage and leave the run green — silently un-testing the one component
+ * that already fails open. Hence the `CI` assertion below: skipping is a local
+ * convenience, never a CI outcome.
  */
 const url = process.env.DATABASE_URL;
 const hasLocalDb = Boolean(url && isLocalPostgres(url));
 
 const KEY_PREFIX = 'test:ratelimit:';
 const rule: RateLimitRule = { limit: 3, windowSeconds: 60 };
+
+describe('live database availability', () => {
+  it.runIf(process.env.CI)('has a database to test against in CI', () => {
+    // Reads the *environment*, not the workflow file — a test that parsed
+    // ci.yml could only confirm the YAML says what it says. This fails if the
+    // service container is removed, misconfigured, or never becomes reachable.
+    expect(hasLocalDb).toBe(true);
+  });
+});
 
 describe.skipIf(!hasLocalDb)('postgresRateLimitStore against a real Postgres', () => {
   afterAll(async () => {

@@ -79,6 +79,53 @@ jobs:
   test:
     name: tests
     runs-on: ubuntu-latest
+
+    # A REAL POSTGRES, because the rate limiter fails OPEN.
+    #
+    # `enforceRateLimit()` swallows store errors and allows the request. So a
+    # malformed upsert, a missing table and an unreachable database all look
+    # identical to a working limiter from outside — every one of them returns
+    # 200. Without a database here, `postgres-store.live.test.ts` SKIPS, and a
+    # broken limiter ships green.
+    #
+    # Same image and digest as docker-compose.yml on purpose: CI testing a
+    # different Postgres version than developers run is a difference that shows
+    # up as an unreproducible CI failure.
+    services:
+      postgres:
+        image: postgres:17.2-alpine@sha256:7e5df973a74872482e320dcbdeb055e178d6f42de0558b083892c50cda833c96
+        env:
+          POSTGRES_USER: osrs
+          POSTGRES_PASSWORD: localdev
+          POSTGRES_DB: osrs
+        ports:
+          - 5432:5432
+        # Without a healthcheck the runner starts the steps as soon as the
+        # container starts, which is several seconds before Postgres accepts
+        # connections — `db:migrate` then fails with a connection error that
+        # looks like config and is actually a race.
+        options: >-
+          --health-cmd "pg_isready -U osrs -d osrs"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    # NOT SECRETS, all four. getEnv() validates its whole schema on first call,
+    # so touching the database requires every required variable to be present,
+    # not just DATABASE_URL.
+    #
+    # The values are deliberately obvious fakes. CRON_SECRET has a 16-character
+    # minimum and gates nothing in a test run; a realistic-looking value here
+    # would teach the habit of putting real ones in a workflow file, which is
+    # public. Real secrets belong in repository secrets and are needed by
+    # neither this job nor `build`.
+    env:
+      DATABASE_URL: postgresql://osrs:localdev@localhost:5432/osrs
+      DATABASE_URL_UNPOOLED: postgresql://osrs:localdev@localhost:5432/osrs
+      WOM_GROUP_ID: '25092'
+      CRON_SECRET: ci-not-a-real-secret-placeholder
+      OSRS_API_USER_AGENT: 'osrs-clan-toolkit-ci/0.1 (+https://github.com/JakeShaw26/osrs-utils)'
+
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
@@ -89,10 +136,13 @@ jobs:
 
       - run: npm ci
 
-      # NO DATABASE HERE, so `postgres-store.live.test.ts` skips rather than
-      # fails — it runs only when DATABASE_URL is loopback. That means the
-      # rate-limiter SQL is verified locally (`npm run test:db`) and NOT here.
-      # A Postgres service container would close that gap.
+      # The migration has to run before the tests: the table it creates is what
+      # the live store test exercises.
+      - run: npm run db:migrate
+
+      # `postgres-store.live.test.ts` now RUNS here rather than skipping. It
+      # asserts it has a database whenever CI is set, so deleting the service
+      # block above fails the suite instead of quietly reducing coverage.
       - run: npm run test
 
   build:
