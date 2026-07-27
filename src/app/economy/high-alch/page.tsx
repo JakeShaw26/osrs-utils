@@ -74,7 +74,7 @@ export default async function HighAlchPage() {
     <CalculatorLayout
       title="High alch profit"
       description="High Level Alchemy value minus the buy price and a nature rune — ranked by what you can actually earn in an hour."
-      className="max-w-6xl"
+      width="full"
       notes={
         <ul className="list-disc space-y-1 pl-4">
           <li>

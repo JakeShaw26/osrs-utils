@@ -70,7 +70,7 @@ export default async function PricesPage({
     <CalculatorLayout
       title="GE price lookup"
       description="Live Grand Exchange prices for every tradeable item, with the margin already net of tax."
-      className="max-w-6xl"
+      width="full"
       notes={
         <ul className="list-disc space-y-1 pl-4">
           <li>

@@ -30,9 +30,11 @@ const TOOLS = [
 
 export default function EconomyPage() {
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-10 sm:px-6">
+    <main className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 lg:py-12">
       <header className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight text-content">Economy</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-content sm:text-3xl">
+          Economy
+        </h1>
         <p className="mt-2 max-w-2xl text-content-muted">
           Live Grand Exchange data from the OSRS Wiki real-time prices API. Price history
           goes back one year, which is as far as the data exists.

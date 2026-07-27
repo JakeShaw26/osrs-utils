@@ -194,8 +194,18 @@ Example:
 osrs-clan-toolkit/0.1 (+https://github.com/JakeShaw26/osrs-utils; discord: yourhandle)
 ```
 
-Put a real contact route in it — a repo URL or a Discord handle. Minimum length
-is 10 characters, checked at startup.
+Put a real contact route in it. Minimum length is 10 characters, checked at
+startup — but length is all the app can check, so the rest is on you.
+
+⚠️ **The repo URL is not a contact route while the repo is private.** It 404s
+for anyone who is not a collaborator, so on its own it identifies us without
+being reachable — which is the half that matters. `api-terms.md` rule 4 is
+"identify honestly", and an unreachable contact fails it. **The Discord handle
+is doing the real work here**; keep one in the string for as long as the repo
+stays private.
+
+Fill in your own handle — the `yourhandle` above is a placeholder, and this
+file is committed. Real values belong in `.env.local` and nowhere else.
 
 **This is not politeness, it is access.** The OSRS Wiki **pre-emptively blocks**
 default agents: `python-requests`, `Python-urllib`, `Apache-HttpClient`,

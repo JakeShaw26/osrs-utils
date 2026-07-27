@@ -22,13 +22,32 @@ import { osrsFetch } from './osrs-fetch';
  *     api-notes.
  */
 
-/** Bucket names verified to exist. An unknown name is a hard error upstream. */
+/**
+ * Bucket names verified to exist. An unknown name is a hard error upstream.
+ *
+ * This is a whitelist of what we have actually introspected, not the full
+ * namespace — a 2026-07-26 probe found **47 buckets**, so a name being absent
+ * here means "not yet verified", never "does not exist".
+ */
 export const BUCKETS = {
   item: 'infobox_item',
   monster: 'infobox_monster',
   /** Equipment stats — attack/defence bonuses, slot, attack speed. */
   bonuses: 'infobox_bonuses',
+  /** Quest prose. Requirements are embedded as `<span class="scp">` markup. */
   quest: 'quest',
+  /**
+   * 646 structured rows: `id`, `name`, `monster`, `task`, `tier`, `type`.
+   * Its existence is why the CA task list is a fetch rather than a content
+   * project — but completion remains unavailable from any API (ADR-0012).
+   */
+  combatAchievement: 'combat_achievement',
+  /**
+   * Drop tables: `item_name` (PAGE), `drop_json` (TEXT), `rare_drop_table`
+   * (BOOLEAN). ⚠️ `drop_json` is `"index": false` — it can be **selected but
+   * not filtered on**, so queries must filter by item and parse client-side.
+   */
+  drops: 'dropsline',
 } as const;
 
 /**
