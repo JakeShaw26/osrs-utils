@@ -103,7 +103,13 @@ A new integration test now covers this permanently:
 `src/lib/ratelimit/postgres-store.live.test.ts` — that `ON CONFLICT` increments
 rather than overwrites, that a new window writes a new row, that **20 concurrent
 increments return 1..20 with none lost**, and that pruning spares open windows.
-It runs only when `DATABASE_URL` is loopback, so CI skips it. `npm run test:db`.
+
+**It runs in CI**, against a Postgres service container pinned to the same image
+digest as `docker-compose.yml`, with the migration applied first. Locally it
+skips without a database (`npm run test:db` runs it) — but skipping is a local
+convenience only: the suite **fails** when `CI` is set and no database is
+reachable, so removing the service block cannot quietly reduce coverage back to
+green. Confirmed in run `30311311849`: **1070 passed, 0 skipped.**
 
 ---
 
@@ -203,10 +209,9 @@ action runtime — rather than merging on green.
 - **Deployment.** Nothing is deployed, and the migration is applied to the local
   database only. Whatever host is chosen starts from an unmigrated database.
   Blocked on **V13** (free-tier cron limits and hosting cost) more than on code.
-- **A Postgres service container in the `test` job.** `postgres-store.live.test.ts`
-  skips in CI because there is no database there, so the rate-limiter SQL — the
-  one thing that fails _open_ and therefore fails silently — is verified only on
-  a developer machine. This is the largest remaining hole in the CI story.
+- **Branch protection.** The `ci` gate job exists so this is one setting, but
+  nothing is protected yet: CI reports and does not block. Require `ci` on
+  `main` in repo settings.
 
 ---
 

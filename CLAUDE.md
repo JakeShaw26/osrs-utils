@@ -246,8 +246,6 @@ Nothing is blocking. Full detail in [`HANDOFF.md`](./HANDOFF.md).
    `player.updatedAt` so staleness is visible rather than implied.
 2. **`pruneRateLimitCounters()` job** behind `CRON_SECRET`.
 3. **De-duplicate the numeric field** across combat/skilling/quests.
-4. **Postgres service container in the CI `test` job** — the rate-limiter SQL
-   fails _open_, so it fails silently, and it is verified only locally today.
 
 ## CI
 
@@ -265,6 +263,12 @@ job added later is covered the moment it joins `needs`.
 - **The `build` job runs with no secrets on purpose** — it is the regression
   test for hard rule #2. If it fails, something started reading env at import
   time. Fix the import; do not add secrets.
+- **The `test` job runs a real Postgres service container**, same image digest
+  as `docker-compose.yml`, and applies the migration before testing. That is
+  what makes `postgres-store.live.test.ts` run rather than skip. Its env values
+  are obvious fakes on purpose — never put a realistic secret in a public
+  workflow. The suite **fails** if `CI` is set and no database is reachable, so
+  deleting the service block cannot quietly reduce coverage.
 
 ## Built, but not wired up
 
