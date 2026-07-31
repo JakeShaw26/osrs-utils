@@ -3,7 +3,7 @@
 Loaded into every AI session. **Keep under ~200 lines** or it stops being read.
 Updating this is part of the definition of done for any architectural change.
 
-**Last updated:** 2026-07-27
+**Last updated:** 2026-07-31
 **Current phase:** **Phase B complete and pushed.** All six feature slices are
 on `origin/main` — **27 routes, 1065 tests**, every route walked in a browser,
 CI green. The rate-limit migration is applied to local Postgres and
@@ -98,6 +98,7 @@ Full requirements: [`PRD.md`](./PRD.md). Decisions: [`docs/adr/`](./docs/adr/).
 | Clue data        | Partial dataset; solvable clue types derived, not stored           | [0017](./docs/adr/0017-partial-clue-dataset-with-derivable-solvers.md) |
 | Quest data       | Authored requirement graph; completion is self-declared            | [0018](./docs/adr/0018-authored-quest-requirements-graph.md)           |
 | Authored rules   | Versioned, sourced, confidence-graded — never bare constants       | [0019](./docs/adr/0019-versioned-authored-game-rules.md)               |
+| Visual direction | **B · Nero Marquina.** Layer 1 re-point only; light is first-class | [0020](./docs/adr/0020-nero-marquina-visual-direction.md)              |
 
 ### Consequences of "no auth" that are easy to forget
 
