@@ -233,7 +233,7 @@ Both questions are answered ([ADR-0020](./docs/adr/0020-nero-marquina-visual-dir
 roughly doubles the surface — texture, sprite slots and contrast all get checked
 twice — and it was chosen anyway because there is no auth, so no theme preference
 can be remembered server-side and every visitor lands on whatever their OS says.
-Dark stays the *default* (user choice → OS → dark, per ADR-0008); first-class
+Dark stays the _default_ (user choice → OS → dark, per ADR-0008); first-class
 means light is designed, not preferred.
 
 ### The build, in this order

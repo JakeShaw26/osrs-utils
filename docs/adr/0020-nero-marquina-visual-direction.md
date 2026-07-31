@@ -27,7 +27,7 @@ reasoned from theory:
   clothes.
 - **Light-mode `--primary: #b47c17` reads brown, and not by accident.** It must
   be that dark to carry **white** `primary-content` at 4.5:1. Pairing true gold
-  `#c9a227` with near-black content clears 7:1 — brighter *and* more accessible.
+  `#c9a227` with near-black content clears 7:1 — brighter _and_ more accessible.
   Dark mode already gets this for free.
 - **There is no auth** ([ADR-0012](./0012-no-authentication-public-read-only.md)),
   so we cannot remember a theme preference server-side. Every visitor arrives on
@@ -44,7 +44,7 @@ token names do not change, so no component changes to re-skin all 27 routes.
 
 **We will treat light mode as first-class, not a fallback.** Marble texture,
 sprite contrast and the inventory-slot treatment must be verified in both
-themes. Dark remains the *default* (resolution order: user choice → OS → dark,
+themes. Dark remains the _default_ (resolution order: user choice → OS → dark,
 per ADR-0008); first-class means light is designed and checked, not preferred.
 
 **We will apply the gold fix regardless of direction:** light-mode `--primary`
@@ -54,7 +54,7 @@ Two rules this direction creates, both enforceable by review:
 
 - **Texture never goes behind data.** Veining is permitted on `surface` and
   chrome, **never** behind `surface-raised` where numbers live. Veining varies
-  contrast *per glyph*, which WCAG cannot measure and an audit will not catch.
+  contrast _per glyph_, which WCAG cannot measure and an audit will not catch.
 - **Feature sprites are illustrations, not glyphs.** Fixed-palette 32-grid
   sprites are not tintable, so they may never carry state through colour — state
   lives on the container. UI chrome stays single-path `currentColor` glyphs.
@@ -80,7 +80,7 @@ Two rules this direction creates, both enforceable by review:
 
 - **B is the most conservative of the four and the least "OSRS".** C was the
   distinctive one. We are trading character for legibility, deliberately, and
-  anyone hoping the redesign would make the app *feel* like RuneScape will find
+  anyone hoping the redesign would make the app _feel_ like RuneScape will find
   it mostly still feels like a spreadsheet with good taste.
 - **First-class light roughly doubles the redesign surface** — every texture,
   slot and contrast check happens twice. Dark-first would have halved it and
@@ -108,13 +108,13 @@ Two rules this direction creates, both enforceable by review:
 
 ## Alternatives considered
 
-| Alternative                                | Why not chosen                                                                                                                                                                                                    |
-| ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **C · Verde Antico**                       | The genuinely close one, and the prettiest — reads as stone *and* as RuneScape. Its green ground weakens the green `profit` signal. Fixable by pushing `profit` to a brighter emerald, but it breaks something the others never touch. **It wins if the app's centre of gravity moves from tables to browsing and discovery**, where character matters more than signal separation. |
-| **A · Carrara & Gold**                     | Closest to classic marble and pleasant, but warm greys make the amber `warning` token muddy — a status token losing distinctness is the same class of problem as C's, in a less-used token.                        |
-| **D · Travertine & Parchment**             | The most OSRS-native (quest-scroll parchment) and tempting for that reason alone. Lowest contrast headroom of the four, and the warm ground eats `border`, which dense tables lean on hardest.                     |
-| **Keep the current palette, apply only the gold fix** | Cheapest and genuinely defensible — the gold fix is the highest-payoff change and is direction-independent. Rejected because the current palette was accumulated rather than designed, and the comparison made its incoherence visible.       |
-| **Dark-first, light as a supported fallback** | Halves the work. Rejected because there is no auth and therefore no server-side theme memory, so a meaningful share of visitors land in light on first paint — and the gold fix, the single best finding, is a light-mode fix.        |
+| Alternative                                           | Why not chosen                                                                                                                                                                                                                                                                                                                                                                      |
+| ----------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **C · Verde Antico**                                  | The genuinely close one, and the prettiest — reads as stone _and_ as RuneScape. Its green ground weakens the green `profit` signal. Fixable by pushing `profit` to a brighter emerald, but it breaks something the others never touch. **It wins if the app's centre of gravity moves from tables to browsing and discovery**, where character matters more than signal separation. |
+| **A · Carrara & Gold**                                | Closest to classic marble and pleasant, but warm greys make the amber `warning` token muddy — a status token losing distinctness is the same class of problem as C's, in a less-used token.                                                                                                                                                                                         |
+| **D · Travertine & Parchment**                        | The most OSRS-native (quest-scroll parchment) and tempting for that reason alone. Lowest contrast headroom of the four, and the warm ground eats `border`, which dense tables lean on hardest.                                                                                                                                                                                      |
+| **Keep the current palette, apply only the gold fix** | Cheapest and genuinely defensible — the gold fix is the highest-payoff change and is direction-independent. Rejected because the current palette was accumulated rather than designed, and the comparison made its incoherence visible.                                                                                                                                             |
+| **Dark-first, light as a supported fallback**         | Halves the work. Rejected because there is no auth and therefore no server-side theme memory, so a meaningful share of visitors land in light on first paint — and the gold fix, the single best finding, is a light-mode fix.                                                                                                                                                      |
 
 ## Revisit if
 
