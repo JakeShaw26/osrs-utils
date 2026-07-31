@@ -6,18 +6,22 @@ read that first; this file covers what just happened and what to do next.
 This replaces the 2026-07-27 evening handoff, which ended at "nothing compares
 the six slices visually". That is now closed — see below.
 
-> ## ⏸ Resume point: one decision, then the redesign is buildable
+> ## ✅ Resume point: the direction is chosen — the redesign is buildable
 >
 > A **design-system project now exists** on claude.ai/design with the current UI
 > inventoried and four redesign directions explored. **Zero repo changes were
 > made** — the code on `main` is untouched by any of it.
 >
-> Everything is blocked on **one choice**: which of directions **A / B / C / D**
-> to build. My recommendation is **B · Nero Marquina**, reasoning below.
-> A second, smaller choice rides along: **is light mode first-class or a
-> fallback?**
+> **Decided 2026-07-31 by the repository owner: direction B · Nero Marquina,
+> with light mode first-class** (not a fallback). Recorded in
+> [ADR-0020](./docs/adr/0020-nero-marquina-visual-direction.md); the reasoning
+> and the rejected directions are below and in the ADR's alternatives table.
 >
-> Phase B's own menu is unchanged and unblocked — see [Next steps](#next-steps).
+> Nothing is blocked. The build sequence is in [Next steps](#next-steps) —
+> start with the Layer 1 re-point, which is the cheapest point to reject.
+>
+> Phase B's own menu is unchanged and unblocked, and one of its items —
+> **de-duplicating the numeric field** — is now worth doing _before_ the re-skin.
 >
 > Start Postgres before doing anything database-shaped: `npm run db:up`.
 
@@ -25,8 +29,8 @@ the six slices visually". That is now closed — see below.
 
 ## Executive summary
 
-**A redesign workstream opened and is parked on a decision.** The session did
-three things:
+**A redesign workstream opened, explored four directions, and B was chosen.**
+The exploration session did three things:
 
 1. **Inventoried the current UI** into a design-system project — 48 components
    and the full token system, rendered light and dark side by side from real
@@ -38,10 +42,11 @@ three things:
 3. **Built an OSRS-grammar pixel icon set** to replace the generic line icons
    the first pass produced.
 
-**Nothing was written to the repository.** The output lives in the design
-project and can be thrown away at no cost if the direction is wrong. That was
-deliberate: a redesign that touches tokens touches all 27 routes, and it is much
-cheaper to reject a palette in a preview than in a diff.
+**No code was written.** The exploration lives in the design project and can be
+thrown away at no cost if the direction turns out wrong. That was deliberate: a
+redesign that touches tokens touches all 27 routes, and it is much cheaper to
+reject a palette in a preview than in a diff. The only repository changes are
+this file and [ADR-0020](./docs/adr/0020-nero-marquina-visual-direction.md).
 
 ---
 
@@ -106,7 +111,8 @@ same brand gold.
 | **C** | **Verde Antico**           | Green-grey `#eef1ec` / `#0d120f`     | The most distinctive. Reads as stone _and_ as RuneScape           | ⚠️ Green ground weakens the green `profit` signal       |
 | **D** | **Travertine & Parchment** | Warm sand `#f2ece0` / `#14100a`      | Most OSRS-native — quest-scroll parchment                         | Lowest contrast headroom; the warm ground eats `border` |
 
-**Recommendation: B · Nero Marquina.** Not because it is the prettiest — C is —
+**Chosen: B · Nero Marquina** (owner, 2026-07-31 — [ADR-0020](./docs/adr/0020-nero-marquina-visual-direction.md)).
+Not because it is the prettiest — C is —
 but because this app is fundamentally **dense numeric tables**, and B is the only
 direction whose ground is chromatically neutral. Every other direction tints the
 surface, and a tinted surface competes with the `profit` / `loss` / `success` /
@@ -220,18 +226,19 @@ A rendered side-by-side comparison is another such source.
 
 ## Next steps
 
-### The decision, first
+### The decision — settled
 
-1. **Pick a direction** — A, B, C or D. Look at `explorations/applied`, not
-   `explorations/palettes`. Recommendation: **B**.
-2. **Decide whether light mode is first-class or a supported fallback.** This
-   changes how much of the work is real. If light is a fallback, the marble
-   texture and the sprite slots only need to be right in dark, and the direction
-   choice matters much less.
+Both questions are answered ([ADR-0020](./docs/adr/0020-nero-marquina-visual-direction.md)):
+**B · Nero Marquina**, and **light mode is first-class**. Light being first-class
+roughly doubles the surface — texture, sprite slots and contrast all get checked
+twice — and it was chosen anyway because there is no auth, so no theme preference
+can be remembered server-side and every visitor lands on whatever their OS says.
+Dark stays the *default* (user choice → OS → dark, per ADR-0008); first-class
+means light is designed, not preferred.
 
-### Then the build, in this order
+### The build, in this order
 
-Once a direction is chosen the work is well-defined and sequenced by blast radius:
+Sequenced by blast radius — earlier steps are cheaper to reject:
 
 - **Re-point Layer 1 in `globals.css`.** Layer 2 semantic names do not change, so
   no component changes. This alone re-skins all 27 routes and is the checkpoint

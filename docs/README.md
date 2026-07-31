@@ -43,6 +43,7 @@ valuable part.
 | [0017](./adr/0017-partial-clue-dataset-with-derivable-solvers.md) | Partial clue dataset; derivable solvers       | Accepted               |
 | [0018](./adr/0018-authored-quest-requirements-graph.md)           | Authored quest requirement graph              | Accepted               |
 | [0019](./adr/0019-versioned-authored-game-rules.md)               | Versioned, sourced, confidence-graded rules   | Accepted               |
+| [0020](./adr/0020-nero-marquina-visual-direction.md)              | Nero Marquina direction; light mode is first-class | Accepted          |
 
 **To add one:** copy [`0000-template.md`](./adr/0000-template.md), take the next
 number, and **add a row above in the same commit**. The `write-adr` skill
