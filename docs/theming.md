@@ -10,9 +10,17 @@ deviation from the original scaffolding brief.
 The whole guide reduces to one idea:
 
 ```
-Layer 1  --osrs-slate-900   raw palette    ← never referenced by a component
+Layer 1  --osrs-stone-900   raw palette    ← never referenced by a component
 Layer 2  --surface-raised   what it MEANS  ← components use only this
 ```
+
+The current palette is **direction B, Nero Marquina**
+([ADR-0020](./adr/0020-nero-marquina-visual-direction.md)) — black marble with
+white veining, on a deliberately **neutral** ground, because this app is dense
+numeric tables and a tinted surface competes with the `profit`/`loss` tokens
+that carry the meaning. Layer 1 was renamed `--osrs-slate-*` → `--osrs-stone-*`
+in that change: nothing outside `globals.css` referenced it, which is the
+clearest evidence the two-layer split works.
 
 A component says `bg-surface-raised`, never `bg-slate-900`. Two consequences:
 
@@ -45,7 +53,13 @@ A component says `bg-surface-raised`, never `bg-slate-900`. Two consequences:
 
 ### Borders — `border`, `border-strong`
 
-### Brand — `primary`, `primary-hover`, `primary-content`
+### Brand — `primary`, `primary-hover`, `primary-content`, `focus-ring`
+
+`focus-ring` is separate from `primary` **because the brand gold cannot carry a
+focus ring in light mode**: `#c9a227` on the light ground measures 2.1:1, under
+the 3:1 WCAG 1.4.11 requires of a non-text indicator. The ring uses a darker
+gold in light and the brand gold in dark. Never re-point it back to `primary`
+"for consistency" — `src/test/token-contrast.test.ts` will fail, correctly.
 
 ### Status — `success`, `danger`, `warning`, `info`
 
@@ -95,10 +109,22 @@ every load — the exact thing a dark-first audience notices.
 2. Add the semantic token to **both** `:root` and `.dark`. Skipping `.dark`
    yields a token that silently looks wrong in the default theme.
 3. Expose it in the `@theme inline` block so Tailwind generates utilities.
-4. Check contrast in both themes. Mid-tone greens and reds that pass on white
-   commonly fail on a dark surface — that is why the dark theme uses the 400
-   variants rather than 600.
+4. **Add it to `src/test/token-contrast.test.ts`** if it renders text or a focus
+   indicator. That test parses `globals.css` and measures every pair in both
+   themes; it is the only thing in the repo that can see a contrast ratio, since
+   a component only knows it asked for `text-content-subtle`. Mid-tone greens
+   and reds that pass on white commonly fail on a dark surface — that is why the
+   dark theme uses the 400 variants rather than the 700s.
 5. Document it in the tables above.
+
+### Known contrast gap
+
+`border-strong` against `surface-raised` is **1.9:1 light / 1.5:1 dark**, under
+the 3:1 WCAG 1.4.11 asks for a control boundary. It predates the Nero Marquina
+re-point (it was 2.0:1 / 1.5:1 before) and raising it makes every input read as
+heavily outlined, so it is recorded here rather than quietly fixed. The test
+deliberately does not assert it — a failing assertion nobody intends to fix
+trains people to ignore the suite.
 
 ## Do / Don't
 

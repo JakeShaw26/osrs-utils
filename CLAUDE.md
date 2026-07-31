@@ -127,9 +127,11 @@ Full requirements: [`PRD.md`](./PRD.md). Decisions: [`docs/adr/`](./docs/adr/).
   **never** fetch. See [`src/components/README.md`](./src/components/README.md).
 - **Domain logic in `src/lib/`**, never in components — calculators must be
   testable without rendering.
-- **Semantic tokens only.** `bg-surface-raised`, not `bg-slate-900`, never
+- **Semantic tokens only.** `bg-surface-raised`, not `bg-stone-900`, never
   `bg-[#171c25]`. No `dark:` variants in components. See
-  [`docs/theming.md`](./docs/theming.md).
+  [`docs/theming.md`](./docs/theming.md). **`token-contrast.test.ts` parses
+  `globals.css` and measures every pair in both themes** — it is the only thing
+  here that can see a contrast ratio, so a new text token must be added to it.
 - **`"use client"` on the smallest leaf that needs it**, never on a page.
 - **`.tabular`** on every GP/XP/DPS number so digits align and don't jitter.
 - **Server Components by default.**

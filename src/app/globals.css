@@ -23,95 +23,128 @@
    The .dark class is set on <html> before paint — see src/lib/theme/theme-script.tsx */
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* --- Layer 1: raw palette (never used directly in components) ------------- */
+/* --- Layer 1: raw palette (never used directly in components) -------------
+ *
+ * Direction B, Nero Marquina — ADR-0020. Black marble with white veining: the
+ * ground is chromatically NEUTRAL on purpose, because this app is dense numeric
+ * tables and a tinted surface competes with the profit/loss tokens that carry
+ * the actual meaning.
+ *
+ * Renamed from --osrs-slate-* : these are near-neutral stone, not slate, and
+ * Layer 1's only job is to describe the raw colour honestly.
+ *
+ * The half-steps (350, 550, 925, 975) exist because the two themes were tuned
+ * independently rather than derived from one another. Rounding them onto a
+ * neighbouring step would change values that were judged side by side.
+ * ------------------------------------------------------------------------- */
 :root {
-  /* Neutrals — cool slate, chosen to sit behind dense numeric tables without vibrating */
-  --osrs-slate-50: #f6f7f9;
-  --osrs-slate-100: #eceef2;
-  --osrs-slate-200: #d5d9e0;
-  --osrs-slate-300: #b1b8c4;
-  --osrs-slate-400: #7d879a;
-  --osrs-slate-500: #5a6478;
-  --osrs-slate-600: #444d5e;
-  --osrs-slate-700: #333b49;
-  --osrs-slate-800: #232935;
-  --osrs-slate-900: #171c25;
-  --osrs-slate-950: #0e1219;
+  /* Stone — cool near-neutral, light end to dark end */
+  --osrs-stone-25: #f2f2f4;
+  --osrs-stone-50: #eeeff0;
+  --osrs-stone-100: #e1e3e5;
+  --osrs-stone-200: #d5d7da;
+  --osrs-stone-300: #b8bbc0;
+  /* 400 and 500 are darkened/lightened from the exploration's #8b8f95 and
+     #676b76, which measured 2.8–3.7:1 behind text-2xs field labels. See the
+     contrast note in docs/theming.md — src/test/token-contrast.test.ts pins it. */
+  --osrs-stone-350: #9195a0;
+  --osrs-stone-400: #7a7e8b;
+  --osrs-stone-500: #6a6d71;
+  --osrs-stone-550: #5f6368;
+  --osrs-stone-700: #35353d;
+  --osrs-stone-800: #24242a;
+  --osrs-stone-900: #17181a;
+  --osrs-stone-925: #141416;
+  --osrs-stone-950: #0b0b0c;
+  --osrs-stone-975: #060607;
 
-  /* Brand — amber/gold, the colour OSRS players associate with the game */
-  --osrs-gold-300: #f5d182;
-  --osrs-gold-400: #edb94a;
-  --osrs-gold-500: #d99e21;
-  --osrs-gold-600: #b47c17;
-  --osrs-gold-700: #8a5d12;
+  /* Brand — gold, the colour OSRS players associate with the game. 500 is the
+     true gold that replaced the brown #b47c17; see the light --primary below. */
+  --osrs-gold-300: #f5dc92;
+  --osrs-gold-400: #edc75a;
+  --osrs-gold-500: #c9a227;
+  --osrs-gold-600: #b8931f;
+  --osrs-gold-700: #8a6d14;
 
-  /* Status */
+  /* Status. Deliberately conventional — red/green/amber/blue carry meaning
+     users already hold, so marble is applied to surface, content and brand and
+     the status ramp only shifts enough to sit on the new grounds. The 400s are
+     for dark surfaces, the 600/700s for light. */
   --osrs-green-400: #4ade80;
-  --osrs-green-500: #22c55e;
-  --osrs-green-600: #16a34a;
+  --osrs-green-700: #15803d;
   --osrs-red-400: #f87171;
-  --osrs-red-500: #ef4444;
-  --osrs-red-600: #dc2626;
+  --osrs-red-700: #b91c1c;
   --osrs-amber-400: #fbbf24;
-  --osrs-amber-500: #f59e0b;
+  --osrs-amber-700: #b45309;
   --osrs-blue-400: #60a5fa;
-  --osrs-blue-500: #3b82f6;
+  --osrs-blue-700: #1d4ed8;
 }
 
 /* --- Layer 2: semantic tokens, light theme ------------------------------- */
 :root {
-  --surface: var(--osrs-slate-50);
+  --surface: var(--osrs-stone-50);
   --surface-raised: #ffffff;
-  --surface-sunken: var(--osrs-slate-100);
+  --surface-sunken: var(--osrs-stone-100);
   --surface-overlay: #ffffff;
-  --surface-hover: var(--osrs-slate-100);
+  --surface-hover: var(--osrs-stone-100);
 
-  --content: var(--osrs-slate-900);
-  --content-muted: var(--osrs-slate-500);
-  --content-subtle: var(--osrs-slate-400);
-  --content-inverse: var(--osrs-slate-50);
+  --content: var(--osrs-stone-900);
+  --content-muted: var(--osrs-stone-550);
+  --content-subtle: var(--osrs-stone-500);
+  --content-inverse: var(--osrs-stone-50);
 
-  --border: var(--osrs-slate-200);
-  --border-strong: var(--osrs-slate-300);
+  --border: var(--osrs-stone-200);
+  --border-strong: var(--osrs-stone-300);
 
-  --primary: var(--osrs-gold-600);
-  --primary-hover: var(--osrs-gold-700);
-  --primary-content: #ffffff;
+  /* THE GOLD FIX (ADR-0020). The old pairing was gold-600 #b47c17 with WHITE
+     content, and it read brown — it had to be that dark to carry white at
+     4.5:1. True gold with near-black content clears 7:1 instead, so the button
+     gets brighter AND more accessible. Dark mode already got this for free. */
+  --primary: var(--osrs-gold-500);
+  --primary-hover: var(--osrs-gold-600);
+  --primary-content: var(--osrs-stone-900);
 
-  --success: var(--osrs-green-600);
-  --danger: var(--osrs-red-600);
-  --warning: var(--osrs-amber-500);
-  --info: var(--osrs-blue-500);
+  --success: var(--osrs-green-700);
+  --danger: var(--osrs-red-700);
+  --warning: var(--osrs-amber-700);
+  --info: var(--osrs-blue-700);
+
+  /* The focus ring is its own token because the brand gold cannot carry it in
+     light mode: #c9a227 on the light ground is 2.1:1, under the 3:1 WCAG needs
+     for a non-text indicator. Dark mode can use the brand gold directly. */
+  --focus-ring: var(--osrs-gold-700);
 
   /* Domain tokens. Deliberately NOT aliases of success/danger: a falling item
      price is not an error, and a rising one is not a success. Keeping them
      separate means we can restyle "loss" without touching validation states. */
-  --profit: var(--osrs-green-600);
-  --loss: var(--osrs-red-600);
-  --members: var(--osrs-gold-600);
+  --profit: var(--osrs-green-700);
+  --loss: var(--osrs-red-700);
+  /* Darker than --primary: "members" is text, usually on a 10%-gold pill, where
+     the brand gold itself would not carry. */
+  --members: var(--osrs-gold-700);
 
   color-scheme: light;
 }
 
 /* --- Layer 2: semantic tokens, dark theme -------------------------------- */
 .dark {
-  --surface: var(--osrs-slate-950);
-  --surface-raised: var(--osrs-slate-900);
-  --surface-sunken: #0a0d13;
-  --surface-overlay: var(--osrs-slate-800);
-  --surface-hover: var(--osrs-slate-800);
+  --surface: var(--osrs-stone-950);
+  --surface-raised: var(--osrs-stone-925);
+  --surface-sunken: var(--osrs-stone-975);
+  --surface-overlay: var(--osrs-stone-800);
+  --surface-hover: var(--osrs-stone-800);
 
-  --content: var(--osrs-slate-100);
-  --content-muted: var(--osrs-slate-400);
-  --content-subtle: var(--osrs-slate-500);
-  --content-inverse: var(--osrs-slate-950);
+  --content: var(--osrs-stone-25);
+  --content-muted: var(--osrs-stone-350);
+  --content-subtle: var(--osrs-stone-400);
+  --content-inverse: var(--osrs-stone-950);
 
-  --border: var(--osrs-slate-800);
-  --border-strong: var(--osrs-slate-700);
+  --border: var(--osrs-stone-800);
+  --border-strong: var(--osrs-stone-700);
 
   --primary: var(--osrs-gold-400);
   --primary-hover: var(--osrs-gold-300);
-  --primary-content: var(--osrs-slate-950);
+  --primary-content: var(--osrs-stone-950);
 
   /* Lighter status variants: mid-tone greens/reds fail contrast on dark surfaces */
   --success: var(--osrs-green-400);
@@ -122,6 +155,8 @@
   --profit: var(--osrs-green-400);
   --loss: var(--osrs-red-400);
   --members: var(--osrs-gold-400);
+
+  --focus-ring: var(--osrs-gold-400);
 
   color-scheme: dark;
 }
@@ -156,6 +191,8 @@
   --color-profit: var(--profit);
   --color-loss: var(--loss);
   --color-members: var(--members);
+
+  --color-focus-ring: var(--focus-ring);
 
   /* Typography. Mono is load-bearing here: GP values, XP counts and DPS figures
      are compared vertically in tables, so digits must be fixed-width. */
@@ -192,7 +229,7 @@
   /* Always-visible focus ring. Removing outlines without a replacement is the
      single most common keyboard-accessibility regression. */
   :focus-visible {
-    outline: 2px solid var(--color-primary);
+    outline: 2px solid var(--color-focus-ring);
     outline-offset: 2px;
   }
 }
