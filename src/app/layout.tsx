@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { SpriteSheet } from '@/components/atoms/SpriteSheet';
 import { ThemeScript } from '@/lib/theme/theme-script';
 import './globals.css';
 
@@ -19,7 +20,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <ThemeScript />
       </head>
-      <body className="min-h-dvh antialiased">{children}</body>
+      <body className="min-h-dvh antialiased">
+        {/* One copy of the sprite artwork for the whole app; every <Sprite> is a
+            <use href> pointing at it. Inlining seven sprites into 27 routes
+            would be dead weight. */}
+        <SpriteSheet />
+        {children}
+      </body>
     </html>
   );
 }

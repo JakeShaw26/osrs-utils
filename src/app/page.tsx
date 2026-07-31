@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { Sprite } from '@/components/atoms/Sprite';
 import { FeatureCard } from '@/components/organisms/FeatureCard';
 import { ThemeToggle } from '@/components/molecules/ThemeToggle';
 import { TOOL_GROUPS } from '@/lib/navigation/tools';
@@ -33,7 +34,11 @@ export default function HomePage() {
 
       {TOOL_GROUPS.map((group) => (
         <section key={group.href} className="mb-10">
-          <h2 className="mb-4 text-lg font-semibold text-content">
+          {/* The sprite is decorative HERE and only here: the heading beside it
+              already says "Economy", so giving it a title would announce the
+              word twice to a screen reader. */}
+          <h2 className="mb-4 flex items-center gap-3 text-lg font-semibold text-content">
+            <Sprite name={group.sprite} size={32} slotted />
             <Link href={group.href} className="hover:text-content-accent">
               {group.heading}
             </Link>

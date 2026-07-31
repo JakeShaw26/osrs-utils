@@ -78,6 +78,13 @@
   --osrs-amber-700: #b45309;
   --osrs-blue-400: #60a5fa;
   --osrs-blue-700: #1d4ed8;
+
+  /* Inventory-slot tones. Not part of the marble palette — these belong to the
+     sprite system, which follows the game's grammar rather than ours. */
+  --osrs-parchment-200: #f1e4bf;
+  --osrs-parchment-400: #dcc68a;
+  --osrs-leather-700: #574934;
+  --osrs-leather-800: #3a3227;
 }
 
 /* --- Layer 2: semantic tokens, light theme ------------------------------- */
@@ -113,6 +120,13 @@
      light mode: #c9a227 on the light ground is 2.1:1, under the 3:1 WCAG needs
      for a non-text indicator. Dark mode can use the brand gold directly. */
   --focus-ring: var(--osrs-gold-700);
+
+  /* Inventory slot — the tile a feature sprite floats in. In light it is a
+     gold-tinted well; in dark it is OSRS's own brown inventory slot, which is
+     what makes the sprite's near-black outline read at all. Tokens rather than
+     a `dark:` variant, per ADR-0008. */
+  --sprite-slot: var(--osrs-parchment-200);
+  --sprite-slot-edge: var(--osrs-parchment-400);
 
   /* Domain tokens. Deliberately NOT aliases of success/danger: a falling item
      price is not an error, and a rising one is not a success. Keeping them
@@ -158,6 +172,9 @@
 
   --focus-ring: var(--osrs-gold-400);
 
+  --sprite-slot: var(--osrs-leather-800);
+  --sprite-slot-edge: var(--osrs-leather-700);
+
   color-scheme: dark;
 }
 
@@ -193,6 +210,9 @@
   --color-members: var(--members);
 
   --color-focus-ring: var(--focus-ring);
+
+  --color-sprite-slot: var(--sprite-slot);
+  --color-sprite-slot-edge: var(--sprite-slot-edge);
 
   /* Typography. Mono is load-bearing here: GP values, XP counts and DPS figures
      are compared vertically in tables, so digits must be fixed-width. */
@@ -240,4 +260,78 @@
     font-variant-numeric: tabular-nums;
     font-family: var(--font-mono);
   }
+
+  /* --- Feature sprite palette (ADR-0020) ---------------------------------
+   *
+   * ⚠️ These are FIXED HEX ON PURPOSE and must never become tokens.
+   *
+   * Feature sprites are illustrations, not glyphs: multi-colour, fixed palette,
+   * byte-identical in both themes, exactly like the game's own item sprites.
+   * That is why they can never carry state (disabled, active, danger) through
+   * colour — state lives on the container. Point one of these at a semantic
+   * token and the sprite starts changing with the theme, which is the bug this
+   * comment exists to prevent. `sprite-palette.test.ts` fails if you do.
+   *
+   * Contrast in dark mode comes from the inventory slot around the sprite, not
+   * from recolouring it — see `--sprite-slot`.
+   * --------------------------------------------------------------------- */
+  .sprite {
+    display: block;
+    /* Without this the browser anti-aliases the staircase and it stops being
+       pixel art. It is the single most load-bearing line in the sprite system. */
+    shape-rendering: crispEdges;
+  }
+
+  .sprite .o {
+    fill: #1b1206;
+  } /* outline */
+  .sprite .g {
+    fill: #e8b23a;
+  } /* gold */
+  .sprite .gh {
+    fill: #ffe28a;
+  }
+  .sprite .gl {
+    fill: #a8761b;
+  }
+  .sprite .st {
+    fill: #5da9c0;
+  } /* steel */
+  .sprite .sth {
+    fill: #a5e0ee;
+  }
+  .sprite .stl {
+    fill: #2f6b80;
+  }
+  .sprite .ir {
+    fill: #7b7b86;
+  } /* iron */
+  .sprite .irh {
+    fill: #b3b3bd;
+  }
+  .sprite .irl {
+    fill: #4a4a53;
+  }
+  .sprite .wd {
+    fill: #6b4423;
+  } /* wood */
+  .sprite .pg {
+    fill: #e8d9a8;
+  } /* parchment */
+  .sprite .pgh {
+    fill: #f7ecc9;
+  }
+  .sprite .pgl {
+    fill: #bda878;
+  }
+  .sprite .rd {
+    fill: #a01c1c;
+  } /* wax / ribbon */
+  .sprite .rdh {
+    fill: #c93a3a;
+  }
+  .sprite .gls {
+    fill: #8fb9c4;
+    opacity: 0.5;
+  } /* glass */
 }

@@ -19,6 +19,8 @@
  * a group lands.
  */
 
+import type { SpriteName } from '@/lib/ui/sprites';
+
 export interface Tool {
   title: string;
   description: string;
@@ -30,6 +32,12 @@ export interface ToolGroup {
   heading: string;
   /** The group's index route. */
   href: string;
+  /**
+   * The feature sprite that stands for this group (ADR-0020). Required, so a
+   * group added later cannot quietly render without one — `tools.test.ts`
+   * checks every name resolves to real artwork in the sheet.
+   */
+  sprite: SpriteName;
   tools: readonly Tool[];
 }
 
@@ -37,6 +45,7 @@ export const TOOL_GROUPS: readonly ToolGroup[] = [
   {
     heading: 'Economy',
     href: '/economy',
+    sprite: 'coins',
     tools: [
       {
         title: 'GE Prices',
@@ -58,6 +67,7 @@ export const TOOL_GROUPS: readonly ToolGroup[] = [
   {
     heading: 'Combat',
     href: '/combat',
+    sprite: 'scimitar',
     tools: [
       {
         title: 'DPS Calculator',
@@ -79,6 +89,7 @@ export const TOOL_GROUPS: readonly ToolGroup[] = [
   {
     heading: 'Clues',
     href: '/clues',
+    sprite: 'clue',
     tools: [
       {
         title: 'Clue Solver',
@@ -100,6 +111,7 @@ export const TOOL_GROUPS: readonly ToolGroup[] = [
   {
     heading: 'Skilling',
     href: '/skilling',
+    sprite: 'anvil',
     tools: [
       {
         title: 'XP Calculator',
@@ -126,6 +138,7 @@ export const TOOL_GROUPS: readonly ToolGroup[] = [
   {
     heading: 'Quests',
     href: '/quests',
+    sprite: 'star',
     tools: [
       {
         title: 'Quest Planner',
@@ -142,6 +155,7 @@ export const TOOL_GROUPS: readonly ToolGroup[] = [
   {
     heading: 'Utility',
     href: '/utility',
+    sprite: 'hourglass',
     tools: [
       {
         title: 'Reset Timers',
