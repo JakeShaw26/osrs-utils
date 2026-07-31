@@ -11,7 +11,7 @@ import {
   TableHeaderCell,
   TableRow,
 } from '@/components/atoms/Table';
-import { NumericField } from '@/components/molecules/skilling/NumericField';
+import { NumericField } from '@/components/molecules/NumericField';
 import { compareCourses } from '@/lib/skilling/agility';
 import { formatCount, parseCount } from '@/lib/utils/parse-quantity';
 import type { AgilityCourse } from '@/lib/skilling/types';

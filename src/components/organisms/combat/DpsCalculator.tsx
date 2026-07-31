@@ -12,8 +12,8 @@ import {
   TableHeaderCell,
   TableRow,
 } from '@/components/atoms/Table';
-import { NumberField } from '@/components/molecules/combat/NumberField';
-import { SelectField, toOptions } from '@/components/molecules/combat/SelectField';
+import { NumericField } from '@/components/molecules/NumericField';
+import { SelectField, toOptions } from '@/components/molecules/SelectField';
 import {
   ATTACK_POTIONS,
   MAGIC_POTIONS,
@@ -132,10 +132,11 @@ export function DpsCalculator() {
   return (
     <div className="flex flex-col gap-6">
       <SelectField
+        id="dps-monster"
         label="Monster"
         value={selectedMonster}
         options={MONSTER_OPTIONS}
-        onValueChange={setSelectedMonster}
+        onChange={setSelectedMonster}
         hint="Monsters with several forms are listed once per form — they have different defences"
       />
 
@@ -159,10 +160,11 @@ export function DpsCalculator() {
         </legend>
 
         <SelectField
+          id="dps-class"
           label="Combat class"
           value={draft.combatClass}
           options={toOptions(CLASSES)}
-          onValueChange={(next) => {
+          onChange={(next) => {
             const chosen = next as CombatClass;
             update({
               combatClass: chosen,
@@ -173,45 +175,51 @@ export function DpsCalculator() {
           }}
         />
         <SelectField
+          id="dps-attack-type"
           label="Attack type"
           value={draft.attackType}
           options={toOptions(attackTypesForClass(draft.combatClass))}
-          onValueChange={(next) => update({ attackType: next as AttackType })}
+          onChange={(next) => update({ attackType: next as AttackType })}
         />
         <SelectField
+          id="dps-style"
           label="Attack style"
           value={draft.style}
           options={toOptions(stylesForClass(draft.combatClass))}
-          onValueChange={(next) => update({ style: next as AttackStyle })}
+          onChange={(next) => update({ style: next as AttackStyle })}
         />
         <SelectField
+          id="dps-void"
           label="Void"
           value={draft.void}
           options={toOptions(voidSetsForClass(draft.combatClass))}
-          onValueChange={(next) => update({ void: next as VoidSet })}
+          onChange={(next) => update({ void: next as VoidSet })}
         />
 
         {draft.combatClass === 'melee' ? (
           <>
             <SelectField
+              id="dps-melee-prayer"
               label="Prayer"
               value={draft.meleePrayer}
               options={toOptions(Object.keys(MELEE_PRAYERS))}
-              onValueChange={(next) => update({ meleePrayer: next as MeleePrayer })}
+              onChange={(next) => update({ meleePrayer: next as MeleePrayer })}
             />
             <SelectField
+              id="dps-attack-potion"
               label="Attack potion"
               value={draft.attackPotion}
               options={toOptions(Object.keys(ATTACK_POTIONS))}
-              onValueChange={(next) =>
+              onChange={(next) =>
                 update({ attackPotion: next as LoadoutDraft['attackPotion'] })
               }
             />
             <SelectField
+              id="dps-strength-potion"
               label="Strength potion"
               value={draft.strengthPotion}
               options={toOptions(Object.keys(STRENGTH_POTIONS))}
-              onValueChange={(next) =>
+              onChange={(next) =>
                 update({ strengthPotion: next as LoadoutDraft['strengthPotion'] })
               }
             />
@@ -221,16 +229,18 @@ export function DpsCalculator() {
         {draft.combatClass === 'ranged' ? (
           <>
             <SelectField
+              id="dps-ranged-prayer"
               label="Prayer"
               value={draft.rangedPrayer}
               options={toOptions(Object.keys(RANGED_PRAYERS))}
-              onValueChange={(next) => update({ rangedPrayer: next as RangedPrayer })}
+              onChange={(next) => update({ rangedPrayer: next as RangedPrayer })}
             />
             <SelectField
+              id="dps-ranged-potion"
               label="Ranged potion"
               value={draft.rangedPotion}
               options={toOptions(Object.keys(RANGED_POTIONS))}
-              onValueChange={(next) =>
+              onChange={(next) =>
                 update({ rangedPotion: next as LoadoutDraft['rangedPotion'] })
               }
             />
@@ -240,21 +250,24 @@ export function DpsCalculator() {
         {draft.combatClass === 'magic' ? (
           <>
             <SelectField
+              id="dps-magic-prayer"
               label="Prayer"
               value={draft.magicPrayer}
               options={toOptions(Object.keys(MAGIC_PRAYERS))}
-              onValueChange={(next) => update({ magicPrayer: next as MagicPrayer })}
+              onChange={(next) => update({ magicPrayer: next as MagicPrayer })}
               hint="Magic prayers affect accuracy only"
             />
             <SelectField
+              id="dps-magic-potion"
               label="Magic potion"
               value={draft.magicPotion}
               options={toOptions(Object.keys(MAGIC_POTIONS))}
-              onValueChange={(next) =>
+              onChange={(next) =>
                 update({ magicPotion: next as LoadoutDraft['magicPotion'] })
               }
             />
             <SelectField
+              id="dps-magic-source"
               label="Spell or staff"
               value={draft.magicSource}
               options={[
@@ -267,9 +280,11 @@ export function DpsCalculator() {
                   label: staff,
                 })),
               ]}
-              onValueChange={(next) => update({ magicSource: next as MagicSourceKey })}
+              onChange={(next) => update({ magicSource: next as MagicSourceKey })}
             />
-            <NumberField
+            <NumericField
+              mode="number"
+              id="dps-extra-magic-damage"
               label="Extra magic damage %"
               value={draft.extraMagicDamagePercent}
               step={0.1}
@@ -285,8 +300,10 @@ export function DpsCalculator() {
           Levels
         </legend>
         {(['attack', 'strength', 'ranged', 'magic'] as const).map((skill) => (
-          <NumberField
+          <NumericField
             key={skill}
+            mode="number"
+            id={`dps-level-${skill}`}
             label={titleCase(skill)}
             value={draft.levels[skill]}
             min={1}
@@ -305,6 +322,7 @@ export function DpsCalculator() {
         {LOADOUT_SLOTS.map((slot) => (
           <SelectField
             key={slot}
+            id={`dps-gear-${slot}`}
             label={titleCase(slot)}
             value={draft.gear[slot] ?? ''}
             options={[
@@ -314,7 +332,7 @@ export function DpsCalculator() {
                 label: item.name,
               })),
             ]}
-            onValueChange={(next) => update({ gear: withSlot(draft.gear, slot, next) })}
+            onChange={(next) => update({ gear: withSlot(draft.gear, slot, next) })}
           />
         ))}
       </fieldset>
@@ -324,12 +342,11 @@ export function DpsCalculator() {
           Target bonuses
         </legend>
         <SelectField
+          id="dps-black-mask"
           label="Black mask"
           value={draft.blackMask}
           options={toOptions(BLACK_MASKS)}
-          onValueChange={(next) =>
-            update({ blackMask: next as TargetEffects['blackMask'] })
-          }
+          onChange={(next) => update({ blackMask: next as TargetEffects['blackMask'] })}
         />
         <label className="flex items-center gap-2 self-end pb-2 text-sm text-content">
           <input
@@ -341,10 +358,11 @@ export function DpsCalculator() {
           On slayer task
         </label>
         <SelectField
+          id="dps-salve"
           label="Salve amulet"
           value={draft.salve}
           options={toOptions(SALVES)}
-          onValueChange={(next) => update({ salve: next as TargetEffects['salve'] })}
+          onChange={(next) => update({ salve: next as TargetEffects['salve'] })}
           hint={
             salveUseless
               ? 'Ignored — this target is not undead'
@@ -388,6 +406,7 @@ export function DpsCalculator() {
         <div className="flex flex-wrap items-end gap-3">
           <div className="min-w-48 flex-1">
             <SelectField
+              id="dps-saved-loadouts"
               label="Saved loadouts"
               value=""
               options={[
@@ -397,7 +416,7 @@ export function DpsCalculator() {
                   label: entry.name,
                 })),
               ]}
-              onValueChange={(next) => {
+              onChange={(next) => {
                 const entry = saved[Number(next)];
                 if (entry) setDraft({ ...entry });
               }}

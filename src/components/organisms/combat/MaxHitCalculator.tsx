@@ -2,8 +2,8 @@
 
 import { useMemo, useState } from 'react';
 import { StatBadge } from '@/components/atoms/StatBadge';
-import { NumberField } from '@/components/molecules/combat/NumberField';
-import { SelectField, toOptions } from '@/components/molecules/combat/SelectField';
+import { NumericField } from '@/components/molecules/NumericField';
+import { SelectField, toOptions } from '@/components/molecules/SelectField';
 import {
   MAGIC_POTIONS,
   MAGIC_PRAYERS,
@@ -153,10 +153,11 @@ export function MaxHitCalculator() {
     <div className="flex flex-col gap-6">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <SelectField
+          id="max-hit-class"
           label="Combat class"
           value={combatClass}
           options={toOptions(CLASSES)}
-          onValueChange={(next) => {
+          onChange={(next) => {
             const chosen = next as CombatClass;
             setCombatClass(chosen);
             setStyle(stylesForClass(chosen)[0]);
@@ -165,20 +166,24 @@ export function MaxHitCalculator() {
         />
 
         <SelectField
+          id="max-hit-style"
           label="Attack style"
           value={style}
           options={toOptions(stylesForClass(combatClass))}
-          onValueChange={(next) => setStyle(next as AttackStyle)}
+          onChange={(next) => setStyle(next as AttackStyle)}
         />
 
         <SelectField
+          id="max-hit-void"
           label="Void"
           value={voidSet}
           options={toOptions(voidSetsForClass(combatClass))}
-          onValueChange={(next) => setVoidSet(next as VoidSet)}
+          onChange={(next) => setVoidSet(next as VoidSet)}
         />
 
-        <NumberField
+        <NumericField
+          mode="number"
+          id="max-hit-level"
           label={`${levelLabel} level`}
           value={level}
           min={1}
@@ -189,18 +194,18 @@ export function MaxHitCalculator() {
         {combatClass === 'melee' ? (
           <>
             <SelectField
+              id="max-hit-melee-prayer"
               label="Prayer"
               value={meleePrayer}
               options={toOptions(Object.keys(MELEE_PRAYERS))}
-              onValueChange={(next) => setMeleePrayer(next as MeleePrayer)}
+              onChange={(next) => setMeleePrayer(next as MeleePrayer)}
             />
             <SelectField
+              id="max-hit-melee-potion"
               label="Potion"
               value={meleePotion}
               options={toOptions(Object.keys(STRENGTH_POTIONS))}
-              onValueChange={(next) =>
-                setMeleePotion(next as keyof typeof STRENGTH_POTIONS)
-              }
+              onChange={(next) => setMeleePotion(next as keyof typeof STRENGTH_POTIONS)}
               hint={`+${potionBoost(level, STRENGTH_POTIONS[meleePotion])} levels`}
             />
           </>
@@ -209,18 +214,18 @@ export function MaxHitCalculator() {
         {combatClass === 'ranged' ? (
           <>
             <SelectField
+              id="max-hit-ranged-prayer"
               label="Prayer"
               value={rangedPrayer}
               options={toOptions(Object.keys(RANGED_PRAYERS))}
-              onValueChange={(next) => setRangedPrayer(next as RangedPrayer)}
+              onChange={(next) => setRangedPrayer(next as RangedPrayer)}
             />
             <SelectField
+              id="max-hit-ranged-potion"
               label="Potion"
               value={rangedPotion}
               options={toOptions(Object.keys(RANGED_POTIONS))}
-              onValueChange={(next) =>
-                setRangedPotion(next as keyof typeof RANGED_POTIONS)
-              }
+              onChange={(next) => setRangedPotion(next as keyof typeof RANGED_POTIONS)}
               hint={`+${potionBoost(level, RANGED_POTIONS[rangedPotion])} levels`}
             />
           </>
@@ -229,20 +234,23 @@ export function MaxHitCalculator() {
         {combatClass === 'magic' ? (
           <>
             <SelectField
+              id="max-hit-magic-prayer"
               label="Prayer"
               value={magicPrayer}
               options={toOptions(Object.keys(MAGIC_PRAYERS))}
-              onValueChange={(next) => setMagicPrayer(next as MagicPrayer)}
+              onChange={(next) => setMagicPrayer(next as MagicPrayer)}
               hint="Magic prayers affect accuracy only"
             />
             <SelectField
+              id="max-hit-magic-potion"
               label="Potion"
               value={magicPotion}
               options={toOptions(Object.keys(MAGIC_POTIONS))}
-              onValueChange={(next) => setMagicPotion(next as keyof typeof MAGIC_POTIONS)}
+              onChange={(next) => setMagicPotion(next as keyof typeof MAGIC_POTIONS)}
               hint={`+${potionBoost(level, MAGIC_POTIONS[magicPotion])} levels`}
             />
             <SelectField
+              id="max-hit-magic-source"
               label="Spell or staff"
               value={magicSourceKey}
               options={[
@@ -255,9 +263,11 @@ export function MaxHitCalculator() {
                   label: staff,
                 })),
               ]}
-              onValueChange={(next) => setMagicSourceKey(next as MagicSourceKey)}
+              onChange={(next) => setMagicSourceKey(next as MagicSourceKey)}
             />
-            <NumberField
+            <NumericField
+              mode="number"
+              id="max-hit-magic-damage"
               label="Magic damage %"
               value={magicDamagePercent}
               step={0.1}
@@ -268,7 +278,9 @@ export function MaxHitCalculator() {
         ) : null}
 
         {combatClass !== 'magic' ? (
-          <NumberField
+          <NumericField
+            mode="number"
+            id="max-hit-strength-bonus"
             label={combatClass === 'melee' ? 'Strength bonus' : 'Ranged strength bonus'}
             value={strengthBonus}
             onValueChange={(next) => setStrengthBonus(next ?? 0)}
@@ -283,10 +295,11 @@ export function MaxHitCalculator() {
         </legend>
 
         <SelectField
+          id="max-hit-black-mask"
           label="Black mask"
           value={blackMask}
           options={toOptions(BLACK_MASKS)}
-          onValueChange={(next) => setBlackMask(next as TargetEffects['blackMask'])}
+          onChange={(next) => setBlackMask(next as TargetEffects['blackMask'])}
         />
 
         <label className="flex items-center gap-2 self-end pb-2 text-sm text-content">
@@ -300,10 +313,11 @@ export function MaxHitCalculator() {
         </label>
 
         <SelectField
+          id="max-hit-salve"
           label="Salve amulet"
           value={salve}
           options={toOptions(SALVES)}
-          onValueChange={(next) => setSalve(next as TargetEffects['salve'])}
+          onChange={(next) => setSalve(next as TargetEffects['salve'])}
           hint="Undead only. Overrides a black mask rather than stacking"
         />
 
@@ -318,14 +332,18 @@ export function MaxHitCalculator() {
               />
               Dharok&apos;s set
             </label>
-            <NumberField
+            <NumericField
+              mode="number"
+              id="max-hit-max-hitpoints"
               label="Max hitpoints"
               value={maxHitpoints}
               min={1}
               disabled={!dharoks}
               onValueChange={(next) => setMaxHitpoints(next ?? 1)}
             />
-            <NumberField
+            <NumericField
+              mode="number"
+              id="max-hit-current-hitpoints"
               label="Current hitpoints"
               value={currentHitpoints}
               min={0}

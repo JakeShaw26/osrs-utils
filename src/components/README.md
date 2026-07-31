@@ -70,17 +70,19 @@ These are enforced by ESLint (`eslint.config.mjs`), not just documented.
 Shared primitives, built in Phase A specifically so parallel feature work does
 not produce five slightly different inputs.
 
-| Component                                       | Layer    | Notes                                                                       |
-| ----------------------------------------------- | -------- | --------------------------------------------------------------------------- |
-| `Button`                                        | Atom     | `primary` / `secondary` / `ghost`                                           |
-| `Input`                                         | Atom     | `numeric` right-aligns + `.tabular`. **Renders no label** — supply your own |
-| `Select`                                        | Atom     | Native `<select>`; `options` array, optional `placeholder`                  |
-| `Table`, `TableHead`, `TableBody`, `TableRow`,  | Atom     | Primitives, not a data table. `numeric` on every GP/XP/level cell           |
-| `TableHeaderCell`, `TableCell`, `TableEmptyRow` |          | `TableEmptyRow` so empty states are stated, not implied                     |
-| `PriceTag`, `StatBadge`                         | Atom     | Single values                                                               |
-| `PriceChangeIndicator`, `ThemeToggle`           | Molecule |                                                                             |
-| `FeatureCard`                                   | Organism |                                                                             |
-| `CalculatorLayout`                              | Template |                                                                             |
+| Component                                       | Layer    | Notes                                                                                                               |
+| ----------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------- |
+| `Button`                                        | Atom     | `primary` / `secondary` / `ghost`                                                                                   |
+| `Input`                                         | Atom     | `numeric` right-aligns + `.tabular`. **Renders no label** — supply your own                                         |
+| `Select`                                        | Atom     | Native `<select>`; `options` array, optional `placeholder`                                                          |
+| `Table`, `TableHead`, `TableBody`, `TableRow`,  | Atom     | Primitives, not a data table. `numeric` on every GP/XP/level cell                                                   |
+| `TableHeaderCell`, `TableCell`, `TableEmptyRow` |          | `TableEmptyRow` so empty states are stated, not implied                                                             |
+| `PriceTag`, `StatBadge`                         | Atom     | Single values                                                                                                       |
+| `NumericField`                                  | Molecule | **The** labelled numeric input. Text mode parses shorthand; `mode="number"` takes `min`/`max`/`step`. Needs an `id` |
+| `SelectField`                                   | Molecule | The `Select` counterpart. Needs an `id` for the same reason                                                         |
+| `PriceChangeIndicator`, `ThemeToggle`           | Molecule |                                                                                                                     |
+| `FeatureCard`                                   | Organism |                                                                                                                     |
+| `CalculatorLayout`                              | Template |                                                                                                                     |
 
 If one of these is close but not quite right, extend it rather than forking it —
 a second near-identical input is how a token system quietly stops being one.
@@ -94,28 +96,30 @@ feature-specific, not as a place to put a general component.
 | Slice        | Atoms       | Molecules                                             | Organisms                                                                                       |
 | ------------ | ----------- | ----------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
 | **Economy**  | `StatTile`  | `ItemSearchForm`, `LiquidityWarning`, `RangeSwitcher` | `AlchProfitTable`, `FlippingCalculator`, `ItemOverview`, `ItemPriceTable`, `PriceHistoryChart`  |
-| **Combat**   | —           | `NumberField`, `SelectField`                          | `DpsCalculator`, `DropRateCalculator`, `MaxHitCalculator`                                       |
+| **Combat**   | —           | —                                                     | `DpsCalculator`, `DropRateCalculator`, `MaxHitCalculator`                                       |
 | **Clues**    | —           | `ClueStepCard`, `CoverageNotice`                      | `ClueSolver`, `CombatAchievementTracker`                                                        |
-| **Skilling** | —           | `NumericField`, `SelectField`                         | `AgilityCourseComparator`, `ConstructionCalculator`, `TrainingMethodComparator`, `XpCalculator` |
-| **Quests**   | —           | `BlockerList`, `LevelField`, `SelfReportedNotice`     | `DiaryChecker`, `LevelEntryPanel`, `ProfileBackup`, `QuestIndex`, `QuestPlanner`                |
+| **Skilling** | —           | —                                                     | `AgilityCourseComparator`, `ConstructionCalculator`, `TrainingMethodComparator`, `XpCalculator` |
+| **Quests**   | —           | `BlockerList`, `SelfReportedNotice`                   | `DiaryChecker`, `LevelEntryPanel`, `ProfileBackup`, `QuestIndex`, `QuestPlanner`                |
 | **Utility**  | `Countdown` | `ResetCard`                                           | `DeathRiskCalculator`, `MinigamePointsCalculator`, `PrayerFlickTimer`, `ResetTracker`           |
 
-### ⚠️ Known convergent duplication
+### ✅ Convergent duplication, resolved
 
-Six agents building in parallel produced the same component more than once, and
-nothing failed as a result — which is why it needs writing down rather than
-assuming someone notices:
+Six agents building in parallel produced the same labelled field five times —
+`combat/NumberField`, `skilling/NumericField`, `quests/LevelField`, and a
+`SelectField` in both `combat/` and `skilling/`. Nothing failed as a result,
+which is why it had to be written down rather than noticed.
 
-- **Three numeric inputs**: `combat/NumberField`, `skilling/NumericField`,
-  `quests/LevelField`. All three exist because the shared `Input` atom renders
-  no label and does not parse shorthand.
-- **Two `SelectField`s**: `combat/` and `skilling/`, both wrapping the `Select`
-  atom with a label.
+All five are now **one `molecules/NumericField` and one `molecules/SelectField`**.
+Use those; there is no longer a slice-local labelled field to copy. **A labelled
+control belongs in `molecules/`, not in a slice folder** — every one of these
+existed only because the `Input` atom deliberately renders no label, which is a
+shared problem, not a feature-specific one.
 
-This is the component-layer twin of the `parse-quantity` duplication already
-resolved in `lib/utils/`. The fix is the same shape — promote one labelled
-field to `molecules/`, delete the rest — but it touches five slices at once, so
-it is a deliberate follow-up, not a drive-by. **Do not add a fourth.**
+The merge took the **union** of the behaviours, the same way the
+`parse-quantity` duplication was resolved in `lib/utils/`: `NumericField` keeps
+both a shorthand-tolerant text mode (`1,000`, `13m`) and a `mode="number"` with
+`min`/`max`/`step`, because both were justified for their callers. Reasoning is
+in the file header.
 
 ## Adding a component
 
