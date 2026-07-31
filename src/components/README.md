@@ -78,6 +78,9 @@ not produce five slightly different inputs.
 | `Table`, `TableHead`, `TableBody`, `TableRow`,  | Atom     | Primitives, not a data table. `numeric` on every GP/XP/level cell                                                   |
 | `TableHeaderCell`, `TableCell`, `TableEmptyRow` |          | `TableEmptyRow` so empty states are stated, not implied                                                             |
 | `PriceTag`, `StatBadge`                         | Atom     | Single values                                                                                                       |
+| `Sprite`                                        | Atom     | Feature illustrations. Fixed palette, **not tintable**, sizes 16/32/48/64 only. `slotted` on dark surfaces          |
+| `Icon`                                          | Atom     | UI chrome glyphs. `currentColor`, so these **are** tintable                                                         |
+| `SpriteSheet`                                   | Atom     | The artwork itself. Rendered once in the root layout — never import it anywhere else                                |
 | `NumericField`                                  | Molecule | **The** labelled numeric input. Text mode parses shorthand; `mode="number"` takes `min`/`max`/`step`. Needs an `id` |
 | `SelectField`                                   | Molecule | The `Select` counterpart. Needs an `id` for the same reason                                                         |
 | `PriceChangeIndicator`, `ThemeToggle`           | Molecule |                                                                                                                     |
@@ -120,6 +123,35 @@ The merge took the **union** of the behaviours, the same way the
 both a shorthand-tolerant text mode (`1,000`, `13m`) and a `mode="number"` with
 `min`/`max`/`step`, because both were justified for their callers. Reasoning is
 in the file header.
+
+### The two icon tiers — they do not mix
+
+ADR-0020 introduced two kinds of picture, and the difference is behavioural, not
+stylistic:
+
+|                  | `Sprite`                             | `Icon`                             |
+| ---------------- | ------------------------------------ | ---------------------------------- |
+| What it is       | A fixed-palette illustration         | A single-path glyph                |
+| Colour           | Fixed hex, identical in both themes  | `currentColor`, follows the tokens |
+| Can carry state? | **No** — state goes on the container | Yes                                |
+| Grid / sizes     | 32×32, only 16/32/48/64              | 16×16, any sensible size           |
+
+**Never put one beside the other at the same size** — a tinted glyph next to a
+fixed-palette illustration reads as a rendering bug rather than a choice.
+
+Two consequences worth knowing before you reach for a sprite:
+
+- **`size` refuses 24.** A 32-grid sprite lands on fractional device pixels at
+  24 and the staircase goes soft. 24 is the size habit reaches for, so the type
+  rejects it rather than trusting discipline.
+- **Use `slotted` on dark surfaces.** The sprite outline is `#1b1206`, roughly
+  1.1:1 against a near-black surface, so the silhouette dissolves without the
+  inventory slot behind it. The slot is also the game's own device, so the fix
+  reads as intent.
+
+Sprites are **original art in OSRS's grammar**, never Jagex's files — hard rule
+\#9 / ADR-0007 forbids vendoring them and `docs/api-terms.md` forbids hotlinking
+the Wiki CDN. The grammar is documented in `SpriteSheet.tsx`.
 
 ## Adding a component
 

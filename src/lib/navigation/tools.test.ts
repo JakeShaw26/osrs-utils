@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { SPRITE_NAMES } from '@/lib/ui/sprites';
 import { readdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { TOOL_GROUPS, allToolHrefs } from './tools';
@@ -108,5 +109,22 @@ describe('tool directory links', () => {
         expect(tool.href.startsWith(`${group.href}/`)).toBe(true);
       }
     }
+  });
+
+  it('gives every group a sprite that exists in the vocabulary', () => {
+    // TypeScript already refuses an unknown name, but only in files it checks.
+    // This also fails if a name is removed from SPRITE_NAMES while a group
+    // still references it, which is the direction the type cannot catch.
+    for (const group of TOOL_GROUPS) {
+      expect(SPRITE_NAMES).toContain(group.sprite);
+    }
+  });
+
+  it('gives each group a distinct sprite', () => {
+    // Two groups sharing a sprite makes the directory unreadable at a glance —
+    // and it renders perfectly, so nothing else would notice.
+    const sprites = TOOL_GROUPS.map((group) => group.sprite);
+
+    expect(new Set(sprites).size).toBe(sprites.length);
   });
 });
