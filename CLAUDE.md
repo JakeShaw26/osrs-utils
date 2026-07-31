@@ -4,11 +4,14 @@ Loaded into every AI session. **Keep under ~200 lines** or it stops being read.
 Updating this is part of the definition of done for any architectural change.
 
 **Last updated:** 2026-07-31
-**Current phase:** **Phase B complete and pushed.** All six feature slices are
-on `origin/main` — **27 routes, 1065 tests**, every route walked in a browser,
-CI green. The rate-limit migration is applied to local Postgres and
-`enforceRateLimit()` is verified end-to-end (20 requests pass, the 21st gets a
-429). Nothing is blocked — see [`HANDOFF.md`](./HANDOFF.md).
+**Current phase:** **Phase B complete; the ADR-0020 redesign is 3 of 4 steps in.**
+All six feature slices are on `origin/main` — **27 routes, 1125 tests**, CI
+green. The palette is re-pointed to Nero Marquina in both themes, the labelled
+fields are de-duplicated, and the OSRS sprite sheet has landed. **Page-level
+layout and navigation is the remaining step.** The rate-limit migration is
+applied to local Postgres and `enforceRateLimit()` is verified end-to-end (20
+requests pass, the 21st gets a 429). Nothing is blocked — see
+[`HANDOFF.md`](./HANDOFF.md).
 
 ---
 
@@ -232,23 +235,30 @@ in commit **`5202810`**. If auth ever returns, recover rather than rewrite —
 `src/app/<feature>/` segment.
 
 **Atoms:** `Button`, `Input`, `Select`, `Table` (+ cells), `PriceTag`,
-`StatBadge`, plus per-slice components — check
+`StatBadge`, `Sprite`, `Icon`, `SpriteSheet` — check
 [`src/components/README.md`](./src/components/README.md) before writing a new
-one. It now carries a full per-slice inventory and a **known-duplication**
-section: three near-identical numeric fields and two `SelectField`s exist
-across slices. **Do not add a fourth.**
+one; it carries a full per-slice inventory. **The labelled-field duplication is
+resolved**: one `molecules/NumericField` and one `molecules/SelectField` replace
+the five that six parallel agents wrote. Don't add a slice-local one.
 
-1065 tests. The escaping and IP-spoofing tests encode behaviour verified against
+**Two icon tiers, and they never mix.** `Sprite` is a fixed-palette illustration
+— not tintable, so it can never carry state through colour; sizes 16/32/48/64
+only, and it needs `slotted` on dark surfaces. `Icon` is a `currentColor` glyph
+and behaves like text. (ADR-0020)
+
+1125 tests. The escaping and IP-spoofing tests encode behaviour verified against
 live APIs; `ranks.test.ts` uses the real Void Reavers `roleOrders` fixture.
 
 ## Next tasks
 
 Nothing is blocking. Full detail in [`HANDOFF.md`](./HANDOFF.md).
 
-1. **Roster page** over `sortByRank`/`groupByRank`, surfacing
+1. **Page-level layout and navigation** — the last ADR-0020 step. There is no
+   global nav at all today; every page is reached from the landing page or a URL.
+2. **Marble texture**, which needs the layout first. Never behind data.
+3. **Roster page** over `sortByRank`/`groupByRank`, surfacing
    `player.updatedAt` so staleness is visible rather than implied.
-2. **`pruneRateLimitCounters()` job** behind `CRON_SECRET`.
-3. **De-duplicate the numeric field** across combat/skilling/quests.
+4. **`pruneRateLimitCounters()` job** behind `CRON_SECRET`.
 
 ## CI
 
