@@ -13,8 +13,8 @@ import {
   TableHeaderCell,
   TableRow,
 } from '@/components/atoms/Table';
-import { NumericField } from '@/components/molecules/skilling/NumericField';
-import { SelectField } from '@/components/molecules/skilling/SelectField';
+import { NumericField } from '@/components/molecules/NumericField';
+import { SelectField } from '@/components/molecules/SelectField';
 import { formatCount, parseCount } from '@/lib/utils/parse-quantity';
 import { SKILL_OPTIONS } from '@/lib/skilling/skills';
 import {

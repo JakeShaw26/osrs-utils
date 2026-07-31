@@ -12,8 +12,8 @@ import {
   TableHeaderCell,
   TableRow,
 } from '@/components/atoms/Table';
-import { NumericField } from '@/components/molecules/skilling/NumericField';
-import { SelectField } from '@/components/molecules/skilling/SelectField';
+import { NumericField } from '@/components/molecules/NumericField';
+import { SelectField } from '@/components/molecules/SelectField';
 import { planConstruction } from '@/lib/skilling/construction';
 import { formatCount, parseCount } from '@/lib/utils/parse-quantity';
 import type { ConstructionBuild, ItemPrices } from '@/lib/skilling/types';

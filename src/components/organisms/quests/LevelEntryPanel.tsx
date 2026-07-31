@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Button } from '@/components/atoms/Button';
 import { Input } from '@/components/atoms/Input';
 import { StatBadge } from '@/components/atoms/StatBadge';
-import { LevelField } from '@/components/molecules/quests/LevelField';
+import { NumericField } from '@/components/molecules/NumericField';
 import { skillLabel } from '@/components/molecules/quests/BlockerList';
 import { combatLevel, totalLevel } from '@/lib/quests/levels';
 import { SKILLS, type PlayerLevels, type SkillName } from '@/lib/quests/types';
@@ -136,11 +136,13 @@ export function LevelEntryPanel({
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">
         {SKILLS.map((skill) => (
-          <LevelField
+          <NumericField
             key={skill}
+            id={`quest-level-${skill}`}
             label={skillLabel(skill)}
             value={drafts[skill] ?? ''}
             error={levelErrors[skill]}
+            maxLength={3}
             onChange={(value) => onLevelChange(skill, value)}
           />
         ))}

@@ -10,7 +10,7 @@ import {
   TableHeaderCell,
   TableRow,
 } from '@/components/atoms/Table';
-import { NumberField } from '@/components/molecules/combat/NumberField';
+import { NumericField } from '@/components/molecules/NumericField';
 import {
   chanceOfAtLeast,
   chanceOfAtLeastOne,
@@ -53,7 +53,9 @@ export function DropRateCalculator() {
   return (
     <div className="flex flex-col gap-6">
       <div className="grid gap-4 sm:grid-cols-2">
-        <NumberField
+        <NumericField
+          mode="number"
+          id="drop-rate-denominator"
           label="Drop rate — 1 in"
           value={denominator}
           min={1}
@@ -61,7 +63,9 @@ export function DropRateCalculator() {
           onValueChange={(next) => setDenominator(next ?? Number.NaN)}
           hint={invalidRate ? 'Enter a denominator of 1 or more' : 'e.g. 512 for 1/512'}
         />
-        <NumberField
+        <NumericField
+          mode="number"
+          id="drop-rate-kills"
           label="Kills"
           value={kills}
           min={0}
