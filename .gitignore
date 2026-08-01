@@ -35,3 +35,15 @@ yarn-error.log*
 # feature agents. Their branches live on the remote; the directories are
 # disposable and must never be committed.
 .claude/worktrees/
+
+# OSRS item icons — 4,646 files (2.29MB) written by
+# `node scripts/generate-item-icons.mjs`. Excluded on the owner's call: 4k
+# binaries is too much repo churn.
+#
+# ⚠️ This makes icon DELIVERY an unsolved problem, not just an untracked
+# directory. A fresh checkout — CI, or any deploy — has none of these, so
+# `ItemIcon` renders empty cells everywhere and the disk-coverage tests in
+# ItemIcon.test.tsx no-op. Re-fetching them per build is not the answer: that
+# is ~4,600 wiki requests every build, which docs/api-terms.md §2 rules out.
+# See ADR-0021 "Delivery is unresolved" and HANDOFF.md.
+/public/item-icons/

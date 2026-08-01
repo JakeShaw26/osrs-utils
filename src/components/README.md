@@ -81,6 +81,7 @@ not produce five slightly different inputs.
 | `Sprite`                                        | Atom     | Feature illustrations. Fixed palette, **not tintable**, sizes 16/32/48/64 only. `slotted` on dark surfaces          |
 | `Icon`                                          | Atom     | UI chrome glyphs. `currentColor`, so these **are** tintable                                                         |
 | `SpriteSheet`                                   | Atom     | The artwork itself. Rendered once in the root layout — never import it anywhere else                                |
+| `ItemIcon`                                      | Atom     | Real OSRS item art **by item id**. Fixed 36px cell, `scale={1\|2}`. Empty cell for an unknown id                    |
 | `NumericField`                                  | Molecule | **The** labelled numeric input. Text mode parses shorthand; `mode="number"` takes `min`/`max`/`step`. Needs an `id` |
 | `SelectField`                                   | Molecule | The `Select` counterpart. Needs an `id` for the same reason                                                         |
 | `PriceChangeIndicator`, `ThemeToggle`           | Molecule |                                                                                                                     |
@@ -126,15 +127,23 @@ in the file header.
 
 ### The two icon tiers — they do not mix
 
-ADR-0020 introduced two kinds of picture, and the difference is behavioural, not
-stylistic:
+ADR-0020 introduced two kinds of picture and ADR-0021 added a third component to
+the first tier. The difference is behavioural, not stylistic:
 
-|                  | `Sprite`                             | `Icon`                             |
-| ---------------- | ------------------------------------ | ---------------------------------- |
-| What it is       | A fixed-palette illustration         | A single-path glyph                |
-| Colour           | Fixed hex, identical in both themes  | `currentColor`, follows the tokens |
-| Can carry state? | **No** — state goes on the container | Yes                                |
-| Grid / sizes     | 32×32, only 16/32/48/64              | 16×16, any sensible size           |
+|                  | `Sprite`                             | `ItemIcon`                                | `Icon`                             |
+| ---------------- | ------------------------------------ | ----------------------------------------- | ---------------------------------- |
+| What it is       | A fixed-palette illustration         | Jagex's own item art                      | A single-path glyph                |
+| Colour           | Fixed hex, identical in both themes  | Fixed, identical in both themes           | `currentColor`, follows the tokens |
+| Can carry state? | **No** — state goes on the container | **No** — same reason                      | Yes                                |
+| Grid / sizes     | 32×32, only 16/32/48/64              | **No grid.** Fixed 36px cell, `scale` 1–2 | 16×16, any sensible size           |
+| Addressed by     | A name from `SPRITE_NAMES`           | An **item id**                            | A name from the glyph set          |
+
+`Sprite` and `ItemIcon` are the same tier — both untintable, both needing
+`slotted` on dark — but they are separate components because the rendering
+models do not meet. Item icons are rasters **trimmed to their content** (18×29
+through 32×31 observed), so there is no grid to scale against; fixing the cell
+and centring the artwork is what makes a row of them line up, and it is how the
+game lays them out too.
 
 **Never put one beside the other at the same size** — a tinted glyph next to a
 fixed-palette illustration reads as a rendering bug rather than a choice.
@@ -149,9 +158,23 @@ Two consequences worth knowing before you reach for a sprite:
   inventory slot behind it. The slot is also the game's own device, so the fix
   reads as intent.
 
-Sprites are **original art in OSRS's grammar**, never Jagex's files — hard rule
-\#9 / ADR-0007 forbids vendoring them and `docs/api-terms.md` forbids hotlinking
-the Wiki CDN. The grammar is documented in `SpriteSheet.tsx`.
+`Sprite`s are **original art in OSRS's grammar**, not Jagex's files — the
+grammar is documented in `SpriteSheet.tsx`. They name _tool groups_ (Economy,
+Combat), which no single item icon represents, so they did not go away when
+`ItemIcon` arrived.
+
+`ItemIcon` **is** Jagex's art, and it is the one documented exception to hard
+rule #9 (ADR-0021). Two rules survive intact and are not negotiable:
+
+- **Never hotlink.** Icons live under `public/item-icons/` and are served
+  same-origin. `docs/api-terms.md` §2 rule 7 forbids pointing an `<img>` at the
+  wiki, on their bandwidth.
+- **⚠️ That directory is gitignored**, so a fresh checkout has no icons and
+  `ItemIcon` renders empty cells everywhere. **Do not wire it into a route until
+  delivery is decided** (ADR-0021). Run `node scripts/generate-item-icons.mjs`
+  to populate it locally.
+- **Never derive the filename from the item name.** The generator reads
+  `/mapping`'s `icon` field; 294 of 4,650 items differ, each a silent 404.
 
 ## Adding a component
 

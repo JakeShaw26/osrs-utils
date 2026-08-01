@@ -1,177 +1,150 @@
-# Handoff — 2026-07-31
+# Handoff — 2026-08-01
 
 Snapshot for picking this up cold. **Living context is [`CLAUDE.md`](./CLAUDE.md)** —
 read that first; this file covers what just happened and what to do next.
 
-This replaces the 2026-07-28 handoff, which ended on an open design decision.
-That decision is made and mostly built.
+This replaces the 2026-07-31 handoff, whose first instruction was "look at the
+sprites". That was done, they were rejected, and replacing them is what this
+session became.
 
-> ## ✅ Resume point: the redesign is real, and one step is left
+> ## ⛔ Resume point: the icons exist, but only on one machine
 >
-> **Direction B (Nero Marquina) is chosen, built and on `main`.** Every route is
-> re-skinned in both themes, the gold is fixed, and the OSRS sprites are in.
-> Four PRs (#20–#23) landed today. CI green, **1125 tests**, 27 routes.
+> **`ItemIcon` is built and tested — real OSRS item art, addressed by item id.**
+> 4,646 icons, 13 new tests, 1,138 passing, lint/typecheck/format/build clean.
 >
-> **One ADR-0020 step remains: page-level layout and navigation.** It is the
-> largest and least reversible piece, which is why it was sequenced last. The
-> marble texture is also unbuilt and depends on it — see
-> [Next steps](#next-steps).
+> **`public/item-icons/` is gitignored**, on the owner's call — 4,646 binaries is
+> too much repo churn. The consequence is not cosmetic: **a fresh checkout has no
+> icons at all**, so CI, any deploy, and any other machine render empty cells.
 >
-> ⚠️ **Nobody has actually looked at the sprites.** Everything else this session
-> was verified by something reading a different source; pixel art is the one
-> thing where no guard substitutes for eyes. `npm run dev`, landing page, both
-> themes. That is the first thing to do tomorrow.
+> **Decide delivery before writing a single line of feature code.** Wiring
+> `ItemIcon` into a route first means building on something that only works
+> where you happen to be sitting. Options and the recommendation are in
+> [ADR-0021](./docs/adr/0021-osrs-item-icons-by-id.md) → _"Delivery is
+> unresolved"_.
 >
-> Start Postgres before anything database-shaped: `npm run db:up`.
+> To get icons locally right now: `node scripts/generate-item-icons.mjs`
+> (~10 min, incremental — a second run costs 5 requests, not 4,650).
+>
+> **Page-level layout and navigation is still the open ADR-0020 step.** It did
+> not move today. Don't lose it.
 
 ---
 
 ## Executive summary
 
-The redesign went from "a decision nobody has made" to "three of its four steps
-shipped" in one session:
+The hand-drawn sprites from ADR-0020 were reviewed and rejected on quality. The
+replacement is Jagex's own item art, and the session's real output is
+infrastructure rather than a visible change: **nothing renders an `ItemIcon`
+yet**, so the landing page still shows the seven sprites you didn't like.
 
-| PR  | What                                               |
-| --- | -------------------------------------------------- |
-| #20 | ADR-0020 — direction B, light mode first-class     |
-| #22 | Layer 1 re-point + the gold fix + a contrast guard |
-| #21 | Five labelled fields collapsed into two            |
-| #23 | The sprite sheet and the two-tier icon system      |
-
-**The most valuable thing built was not the palette — it was
-`src/test/token-contrast.test.ts`.** ADR-0020 claims light mode is first-class,
-and nothing in the repo could check that claim: a component only knows it asked
-for `text-content-subtle`, and whether that is legible is decided two files away,
-per theme. Measuring instead of looking is what turned the redesign from a
-plausible change into a verified one.
+| Built                               | What                                                                    |
+| ----------------------------------- | ----------------------------------------------------------------------- |
+| `scripts/generate-item-icons.mjs`   | Hand-run, incremental, throttled ~8 req/s with widening 403/429 backoff |
+| `src/lib/ui/item-icons.ts`          | `hasItemIcon` / `itemIconSrc`, over a committed **id manifest**         |
+| `src/components/atoms/ItemIcon.tsx` | Fixed 36px cell, `scale={1\|2}`, empty cell for an unknown id           |
+| `.item-icon` in `globals.css`       | `image-rendering: pixelated` — the raster peer of `.sprite`             |
+| ADR-0021 (+ index, CLAUDE.md)       | The licensing position and the hard-rule-#9 carve-out                   |
 
 ---
 
 ## What the measurement found
 
-Parsing `globals.css` and computing WCAG ratios for every rendered pair, before
-and after the re-point:
+Three things were checked against live endpoints rather than assumed, and each
+changed the design:
 
-- **The old light-mode gold button label was 3.60:1.** It had failed AA since
-  Phase A, and the exploration card's claim that it "scrapes 4.5:1" was
-  generous. It is **7.34:1** now.
-- **The re-point fixed five failing pairs and quietly broke two.** The brighter
-  gold dropped the light focus ring to 2.1:1 — a **keyboard-accessibility
-  regression every existing test stayed green through** — and light
-  `content-subtle` fell to 2.82:1 behind the `text-2xs` field labels that are
-  now on every calculator.
+- **`/mapping` already carries the icon filename.** All 4,650 items have an
+  `icon` field. **294 of them (6.3%) are not derivable from the item name** —
+  `Acorn` is drawn by `Acorn 5.png`, `Abyssal bracelet(5)` by
+  `Abyssal bracelet.png`. Deriving would have produced 294 silent 404s. **Never
+  derive this.**
+- **Item icons are not on a grid.** They are trimmed to content — widths 18–36,
+  heights 29–32 — so they could not simply reuse `Sprite`, whose whole size
+  union rests on a fixed 32 grid. The cell is fixed instead, and the artwork
+  sits inside it.
+- **⚠️ The cell is 36 because that is the game's, not because a sample said so.**
+  A partial sample topped out at 32×31; the full set reaches exactly **36×32**.
+  Sizing from the measurement would have clipped the widest icons in the app and
+  nowhere else. Where a documented invariant and a sample agree, cite the
+  invariant — the sample can only ever be a lower bound.
 
-**Three token values therefore deviate from the exploration card on purpose**
-(`content-subtle` in both themes, light `warning`), plus one token the card never
-had: `--focus-ring`, because the brand gold cannot carry a ring on a light
-ground. All are called out in ADR-0020 and `docs/theming.md`. If the card's exact
-values are ever preferred, that is a deliberate trade, not a correction.
+Four of the 4,650 mapping rows name an icon file that 404s (`Crystal 2h axe`,
+`Trinket of vengeance (1)`/`(2)`, and the inactive axe). The mapping is
+authoritative about the **filename**, not about the file existing. Those ids are
+absent from the manifest and render the empty cell — the designed path, working.
 
-**A concept worth keeping:** WCAG has two thresholds and the second is easy to
-miss. Text needs **4.5:1**. Non-text indicators — focus rings, control
-boundaries, chart strokes — fall under **1.4.11 at 3:1**. Nothing visually
-announces which rule applies, which is exactly how a focus ring escapes a
-text-contrast audit and then fails only for the people least likely to be in the
-room when colours get picked.
-
-**Known gap, deliberately not asserted:** `--border-strong` is 1.9:1 / 1.5:1
-against raised surfaces. It predates the redesign, and raising it makes every
-input read as heavily outlined. Documented in `docs/theming.md` instead — a
-failing assertion nobody intends to fix trains people to ignore the suite.
+**The icons were looked at**, not just counted: 4151, 20997 and 11802 render as
+abyssal whip, twisted bow and Armadyl godsword. Last session's lesson held —
+"the test passes" and "the picture is right" are different claims.
 
 ---
 
-## The guards added, and what each one reads
+## What was decided about licensing
 
-The pattern this project keeps rediscovering held again: **every guard that
-caught something reads a different source than the code it guards.**
+The starting position — _"it's a personal project, not distribution"_ — does not
+hold. This app is public and read-only (ADR-0012), so serving an image to a
+visitor is distribution and public display whatever the motive.
 
-| Guard                                | Reads            | Catches                                     |
-| ------------------------------------ | ---------------- | ------------------------------------------- |
-| `token-contrast.test.ts`             | `globals.css`    | Illegible token pairs, in either theme      |
-| `token-contrast.test.ts` (structure) | `globals.css`    | A hex literal smuggled into Layer 2         |
-| `Sprite.test.tsx` (sheet coverage)   | The rendered DOM | A sprite named but never drawn              |
-| `Sprite.test.tsx` (palette)          | `globals.css`    | A sprite fill pointed at a theme token      |
-| `tools.test.ts`                      | `TOOL_GROUPS`    | A group with a missing or duplicated sprite |
+What makes it acceptable is different and already written down: `api-terms.md`
+§1's **"Tolerated ≠ licensed. We rely on Jagex's forbearance."** This extends
+that bet from data to art. Two facts worth not re-deriving:
 
-Two earned their keep immediately:
+- **OSRS Wiki images are _not_ CC BY-NC-SA.** Text is; images are _"used under
+  the fair use license"_ and remain Jagex's. **Fair use is a defence, not a
+  licence** — it does not transfer downstream to us.
+- **The npm package route (`@dava96/osrs-icons`) does not launder this.** It
+  ships icons under CC BY-NC-SA 3.0 while its own README says they are Jagex's
+  property. It cannot license what it does not own.
 
-- **The contrast guard caught the sprite-slot colours the next day**, on a PR
-  that had nothing to do with contrast — the first draft put raw hex in Layer 2
-  instead of referencing Layer 1.
-- **The sprite-coverage guard catches what types cannot.** `SpriteName` accepting
-  `'coins'` proves the union lists it, not that anyone _drew_ it, and a `<use>`
-  pointing at a missing id renders **nothing at all**, silently.
-
-Both were verified by making them fail on purpose before being trusted.
-
----
-
-## The field de-duplication (#21)
-
-`combat/NumberField`, `skilling/NumericField`, `quests/LevelField` and two
-`SelectField`s became `molecules/NumericField` and `molecules/SelectField`. Done
-**before** the re-skin on purpose: three near-identical inputs means restyling
-the input three times and getting it subtly wrong twice.
-
-The merge took the **union**, the same resolution `parse-quantity` got, so
-nothing that worked stopped working — text mode keeps the deliberate refusal of
-`type="number"` (players paste `1,000` and type `13m`, both of which a native
-number input silently discards, handing the caller an empty string that reads as
-0), and `mode="number"` keeps combat's `min`/`max`/`step` and its
-null-not-`NaN` reporting.
-
-Two side effects worth remembering:
-
-- **`id` is now required**, which is what lets hint and error be associated with
-  `aria-describedby`. Combat's hints are announced to screen readers for the
-  first time — they were previously rendered with nothing pointing at them.
-- **Skilling's field labels look different**: they now use the uppercase
-  micro-label combat and quests already shared.
+**One consequence worth keeping in view:** because the PNGs are _not_ committed,
+"make the repo public" stays a cheap option for unlocking branch protection.
+Committing them would have turned that into publishing a Jagex art mirror.
 
 ---
 
 ## Next steps
 
-### First, tomorrow
+### First — the blocker
 
-1. **Look at the app.** `npm run dev`, landing page, both themes. Specifically:
-   does the light-mode inventory slot read as intentional? In dark it is OSRS's
-   own brown slot; in light it is a gold-tinted well, which was a judgement call
-   made from the palette rather than something the exploration showed.
+1. **Decide icon delivery.** ADR-0021's _"Delivery is unresolved"_ table has
+   three options. The recommendation is **one packed atlas + an offset map**:
+   the objection was file _count_, and an atlas is the only option that answers
+   file count without moving the cost onto the wiki. It changes `ItemIcon`'s
+   internals (`background-position` rather than `<img src>`) and costs a
+   whole-atlas download on pages showing few icons — that is the trade to weigh.
 
-### Then, the last ADR-0020 step
+### Then — both of these, in this order
 
-2. **Page-level layout and navigation.** Largest and least reversible, so it was
-   sequenced last, after a token system already seen working. Note there is
-   currently **no global nav at all** — every page is reached from the landing
-   page or by URL. `Icon` now exists for chrome (chevron, close, search, sort,
-   filter, sun/moon), so the pieces are there.
-3. **Marble texture.** Cheap, but it needs somewhere legitimate to live and the
-   texture rule bans it from behind data — `surface` and chrome only, never
-   behind `surface-raised` where the numbers are. Veining varies contrast **per
-   glyph**, which WCAG cannot measure and an audit will not catch. Layout first
-   gives it a home. The filter and the ALLOWED/BANNED pair are in the design
-   project's `explorations/marble-texture` card. `feTurbulence` is CPU-rasterised
-   and re-rasterises on resize, so bake it or fix its size.
+2. **Re-point the tool groups at real item icons.** This is what actually fixes
+   the original complaint. `TOOL_GROUPS` in `lib/navigation/tools.ts` carries a
+   sprite _name_; it would carry an **item id** instead — coins (995) for
+   Economy, a clue scroll for Clues, and so on. Small change plus its test, and
+   it lets `SpriteSheet` and the seven hand-drawn sprites go entirely.
+3. **Wire `ItemIcon` into economy.** `/economy/prices` and `/economy/items/[id]`
+   already have item ids in hand, so it is a display change with no new data and
+   no new fetch.
+
+### Then — the ADR-0020 step that is still open
+
+4. **Page-level layout and navigation.** Unchanged from the last two handoffs
+   and still the largest, least reversible piece. There is **no global nav at
+   all** — every page is reached from the landing page or by URL. `Icon` exists
+   for chrome; `ItemIcon` now exists for content.
+5. **Marble texture**, which needs the layout first. Never behind data.
 
 ### Phase B's menu — unchanged, still unblocked
 
-- **Roster page.** Still the highest-value thing not yet built: `sortByRank` /
-  `groupByRank` over the WOM group, surfacing `player.updatedAt` so staleness is
-  visible rather than implied. One request, no fan-out.
-- **`pruneRateLimitCounters()` job**, behind `CRON_SECRET`. Nothing breaks
-  without it; the table just grows.
-- **Drop-table feature**, now that V9b is answerable.
-- **Deployment.** Nothing is deployed and the migration is applied to the local
-  database only, so any host starts from an unmigrated database. Blocked on
-  **V13** more than on code.
-- **~~Branch protection~~ — blocked, not pending.** Carried across four handoffs
-  as "one setting in repo settings". It is not available: the API returns
-  **403, "Upgrade to GitHub Pro or make this repository public"**. On a private
-  repo on the free plan there is no branch protection and no rulesets. The real
-  options are to make the repo public, pay for Pro, or accept that CI reports
-  rather than blocks. **Decide which, rather than re-listing it.**
+- **Roster page.** Still the highest-value thing not built: `sortByRank` /
+  `groupByRank` over the WOM group, surfacing `player.updatedAt`.
+- **`pruneRateLimitCounters()` job**, behind `CRON_SECRET`.
+- **Drop-table feature**, now that V9b is answerable — and a natural first
+  consumer of `ItemIcon`.
+- **Deployment.** Blocked on **V13** more than on code. Note the migration is
+  applied locally only.
+- **~~Branch protection~~ — blocked, not pending.** The API returns **403,
+  "Upgrade to GitHub Pro or make this repository public"**. On a private repo on
+  the free plan there is no branch protection and no rulesets. Make the repo
+  public, pay for Pro, or accept that CI reports rather than blocks. **Decide
+  which, rather than re-listing it.**
 
 ---
 
@@ -192,26 +165,29 @@ Unchanged. **Resolved: V1, V3, V9, V9b, V11, V14.** Moot: V11a, V4.
 
 **New this session:**
 
-- **`.prettierignore` hides `.claude/worktrees/`, so a Prettier check run from
-  the repo root against a worktree path silently checks _nothing_** and prints
-  "All matched files use Prettier code style!". CI then fails on `format:check`,
-  where the same files are repo-relative. Run Prettier **with the worktree as the
-  working directory**. A green result from a check that checked nothing is worse
-  than a red one.
-- **Layer 1 is genuinely isolated.** Renaming `--osrs-slate-*` → `--osrs-stone-*`
-  touched nothing outside `globals.css`. That is ADR-0008's indirection paying
-  off, and it means the next palette change is still a one-file edit.
-- **Sprites cannot be tinted, ever.** They are fixed-palette illustrations, so
-  they can never carry state (disabled, active, danger) through colour — state
-  lives on the container. Glyphs (`Icon`) are `currentColor` and can. **Never put
-  one beside the other at the same size**; it reads as a rendering bug.
-- **`Sprite` refuses `size={24}`** at the type level. A 32-grid sprite lands on
-  fractional device pixels there and goes soft, and 24 is the size habit reaches
-  for.
-- **Sprites need the inventory slot on dark.** The `#1b1206` outline is ~1.1:1 on
-  a near-black surface and the silhouette dissolves without a lighter ground.
-- **ADRs are point-in-time.** ADR-0008 still names `--osrs-slate-900` as its
-  example. That was true when written, and it was deliberately not edited.
+- **`/mapping`'s `icon` field is authoritative; the item name is not.** 294 of
+  4,650 differ. This is the same family as the `Salve amulet(i)` page-name trap.
+- **A 200 response does not mean the icon exists.** Four mapping rows name files
+  that 404. Handle per-item failure; do not abort the run.
+- **`next/image` is wrong for pixel art**, not merely unnecessary. It resamples
+  and re-encodes, which is exactly what destroys it, and
+  `image-rendering: pixelated` cannot undo a resampled source. `<img>` plus a
+  documented `no-img-element` suppression is deliberate — don't "fix" it. Vercel
+  also bills optimisation per source image.
+- **`shape-rendering: crispEdges` and `image-rendering: pixelated` are not
+  interchangeable.** The first is SVG-only and does nothing to a raster; the
+  second does nothing to an SVG. `Sprite` needs one, `ItemIcon` the other.
+- **Throttle with a shared cursor, not a per-worker sleep.** `await sleep(delay)`
+  inside N workers gives N× the intended rate — the classic way a "throttled"
+  scraper turns out not to be.
+- **A generated TS file fails `format:check` until `npm run format` runs.**
+  Generated datasets are Prettier-formatted in this repo; the script prints the
+  reminder.
+- **`ItemIcon.test.tsx`'s disk guards are `it.runIf` and currently skipping.**
+  That is a deliberate, temporary concession because their subject is
+  gitignored. **Make them unconditional when delivery lands** — a skipped guard
+  that stays skipped is how a suite starts lying. Contrast
+  `postgres-store.live.test.ts`, which fails rather than skips under CI.
 
 **Carried over, still true:**
 
@@ -221,14 +197,23 @@ Unchanged. **Resolved: V1, V3, V9, V9b, V11, V14.** Moot: V11a, V4.
   em-dashes in `.tsx` past typecheck, lint _and_ Prettier. **Use the editor, not
   shell text substitution, on source files.** Its quote mangling also breaks
   `git commit -m`; write the message to a file and use `git commit -F`.
+- **`.prettierignore` hides `.claude/worktrees/`**, so a root-run Prettier check
+  against a worktree path silently checks _nothing_ and prints success.
+- **Sprites cannot be tinted, ever** — state lives on the container. Glyphs
+  (`Icon`) are `currentColor` and can. Never put one beside the other at the
+  same size.
+- **Sprites and item icons both need the inventory slot on dark.** The `#1b1206`
+  outline is ~1.1:1 on a near-black surface.
+- **ADRs are point-in-time.** ADR-0008 still names `--osrs-slate-900`; ADR-0020
+  still says sprites must be original art, with a forward pointer to ADR-0021
+  rather than an edit.
 - **The dev server must be stopped before `next build`** — both use `.next/`.
 - **`force-dynamic` is not a caching-neutral flag.** Use
-  `fetchCache = 'default-cache'` + `connection()`. Lint enforces it in pages.
+  `fetchCache = 'default-cache'` + `connection()`.
 - **`cn()` joins classes, it does not merge them.** CSS source order decides.
 - **`getEnv()` validates the entire schema on first call.**
 - **`app/layout.tsx` provides no `<main>`** — every page renders its own.
 - **ESLint flat config: same-named rules replace, they do not merge.**
-- **`URL.hostname` keeps the brackets on IPv6.**
 - **Never concatenate a Bucket query.** A bad query returns **HTTP 200** with an
   `error` field.
 - **`roleOrders` indices are sparse**; **`gained` returns fewer rows than
@@ -239,17 +224,23 @@ Unchanged. **Resolved: V1, V3, V9, V9b, V11, V14.** Moot: V11a, V4.
 
 ## The thing this session confirmed
 
-The 2026-07-28 handoff closed its open item — "nothing compares the six slices
-visually" — by building the design-system project. Today added the sharper
-version of the same lesson:
+The last three handoffs each closed on a variant of the same lesson: a rendered
+comparison catches what walking routes cannot, and a measurement catches what
+looking cannot. Today added the inverse, and it is the sharper half.
 
-**A rendered comparison catches what walking routes cannot, and a measurement
-catches what looking cannot.** The side-by-side surfaced the brown gold. But only
-arithmetic could show that the _fixed_ gold had broken the focus ring, that the
-old button label had been failing AA for weeks, or that a sprite fill had been
-pointed at a theme token. Every one of those renders perfectly.
+**Measurement is a lower bound, not a specification.** The icon cell was nearly
+sized from a 222-file sample that topped out at 32×31. The real maximum is
+36×32, and the difference would have clipped the widest icons in production
+while every test stayed green — because the tests would have been written
+against the same sample. The fix was not more measuring; it was noticing that
+the game _publishes_ a 36×32 inventory cell and that a sample can only ever
+confirm a documented invariant, never replace one.
 
-Three sessions of parallel-agent work produced defects that were always an
-_absence_ or an _accident_, never wrong logic. Today's were the same shape — and
-the guards that caught them were, again, the ones reading a different source than
-the code they guard.
+The second confirmation is duller and more useful: **a decision changes the docs
+that assert its opposite.** Reversing the commit-the-PNGs call meant editing
+ADR-0021's title, its decision, its consequences, its alternatives table, plus
+`CLAUDE.md`, `api-terms.md`, `components/README.md`, the generator header and
+the manifest template. Any one of those left stale would have been a document
+confidently stating the opposite of the truth — which is worse than no document,
+and is exactly what `components/README.md` was doing about sprites before this
+session touched it.

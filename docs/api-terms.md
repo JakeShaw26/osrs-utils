@@ -69,7 +69,13 @@ losing hiscores access degrades the app rather than breaking it.
 
 ### What the terms actually say
 
-- **Content is CC BY-NC-SA 4.0** — attribution, non-commercial, share-alike.
+- **Text content is CC BY-NC-SA 4.0** — attribution, non-commercial, share-alike.
+- **⚠️ Images are NOT.** [RuneScape:Images](https://oldschool.runescape.wiki/w/RuneScape:Images)
+  states they are _"used under the fair use license"_ and remain Jagex's
+  property. **Fair use is a defence, not a licence** — it is assessed per use and
+  does not transfer to downstream reusers. Assuming the page footer's CC licence
+  covers the pictures on the page is the easy mistake here, and any npm package
+  that ships wiki images under a CC licence is making it. (ADR-0021)
 - **User-Agent is the one hard requirement.** The wiki asks only this, and
   **pre-emptively blocks** default agents: `python-requests`, `Python-urllib`,
   `Apache-HttpClient`, `RestSharp`, `Java`, bare `curl`.
@@ -92,7 +98,15 @@ losing hiscores access degrades the app rather than breaking it.
 5. **Non-commercial only** (CC NC). This clause, combined with Jagex §6,
    **forecloses monetising this project.** Accepted deliberately.
 6. **Share-alike (SA)** applies to adapted _content_, not to our source code.
-7. **Don't hotlink assets** without checking terms — includes map tiles (PRD V7).
+7. **Never hotlink assets.** Every image we display is served from our own
+   origin. Item icons are downloaded by `scripts/generate-item-icons.mjs` in one
+   throttled hand-run (ADR-0021); map tiles remain unresolved (PRD V7).
+   Hotlinking spends their bandwidth on our traffic every time a page renders.
+   **The generator must never run in CI or at build** — that is ~4,600 requests
+   per build, which is the sustained load this section exists to prevent.
+8. **The icon filename comes from `/mapping`'s `icon` field, never from the item
+   name.** 294 of 4,650 differ — `Acorn` is drawn by `Acorn 5.png` — and each
+   mismatch is a silent 404.
 
 > Their limits are **goodwill, not contract**. Getting blocked affects the whole
 > clan's IP, and the block would be entirely deserved.

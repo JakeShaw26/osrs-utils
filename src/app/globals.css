@@ -282,6 +282,15 @@
     shape-rendering: crispEdges;
   }
 
+  /* The raster equivalent of the line above, and just as load-bearing. Item
+     icons are ~30px PNGs from the game; the default smooth filter turns them to
+     mush the moment anything scales them. `crispEdges` is SVG-only and does
+     nothing here — these two properties are not interchangeable. (ADR-0021) */
+  .item-icon {
+    display: block;
+    image-rendering: pixelated;
+  }
+
   .sprite .o {
     fill: #1b1206;
   } /* outline */
