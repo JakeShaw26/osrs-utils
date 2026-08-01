@@ -1,19 +1,42 @@
 /**
  * GENERATED FILE — do not edit by hand.
  *
- * Item ids the generator successfully fetched an icon for, as of
- * 2026-08-01, via `node scripts/generate-item-icons.mjs`
- * over the OSRS Wiki price mapping (4650 items).
+ * Written by `node scripts/pack-item-icons.mjs` on 2026-08-01,
+ * describing the 10 atlas sheets in `public/item-icons/` (ADR-0022).
  *
- * This file is ids only — data, not artwork — so it carries none of the
- * licensing weight the PNGs do, which is why it is committed and they are not
- * (ADR-0021). It exists so `hasItemIcon()` can answer without touching the
- * filesystem, which a Server Component could do but a Client Component cannot.
- *
- * ⚠️ An id here means "an icon was downloadable", NOT "the file is present in
- * this checkout" — `public/item-icons/` is gitignored.
+ * ⚠️ This file and those sheets are ONE artefact in two halves. An id's position
+ * in `ITEM_ICON_IDS` is its cell in the atlas, so editing, sorting or filtering
+ * this array without repacking repoints every icon after the edit at the wrong
+ * item — which renders as art, not as an error.
  */
 
+/** The game's inventory cell, and the grid every sheet is cut on. */
+export const ATLAS_CELL = 36;
+
+/** Cells per row within a sheet. */
+export const ATLAS_COLUMNS = 32;
+
+/** Cells per sheet. Sheet = index / this, cell within it = index % this. */
+export const ATLAS_SHARD_CAPACITY = 512;
+
+/**
+ * Sheet filenames, in shard order, under `/item-icons/`. Content-hashed so they
+ * can be served `immutable` — see next.config.ts.
+ */
+export const ATLAS_SHARDS: readonly string[] = [
+  'atlas-0-d625847b.png',
+  'atlas-1-3ca8ad0d.png',
+  'atlas-2-86601594.png',
+  'atlas-3-574195be.png',
+  'atlas-4-87dda8e7.png',
+  'atlas-5-0dd484d1.png',
+  'atlas-6-4936351a.png',
+  'atlas-7-72ea03ca.png',
+  'atlas-8-ffe3e4df.png',
+  'atlas-9-ee88791e.png',
+];
+
+/** Item ids in atlas order. Index into this array = cell index. */
 export const ITEM_ICON_IDS: readonly number[] = [
   2, 6, 8, 10, 12, 28, 30, 36, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 50, 52, 53, 54, 56,
   58, 60, 62, 64, 66, 68, 70, 72, 91, 93, 95, 97, 99, 101, 103, 105, 107, 109, 111, 113,
@@ -370,5 +393,5 @@ export const ITEM_ICON_IDS: readonly number[] = [
   33911, 33914, 33917, 33920, 33923, 33926, 33929, 33932, 33935, 33938, 33941, 33944,
   33947, 33950, 33953, 33956, 33959, 33962, 33965, 33968, 33971, 33974, 33977, 33980,
   33983, 33986, 33989, 33992, 33995, 33998, 34001, 34004, 34007, 34010, 34013, 34017,
-  34027, 34033, 34035,
+  34027, 34033,
 ];

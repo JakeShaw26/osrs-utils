@@ -92,6 +92,15 @@ _not_ committed.**
 
 ## ⚠️ Delivery is unresolved, and nothing ships until it is
 
+> **RESOLVED by [ADR-0022](./0022-item-icon-delivery-packed-atlas.md)** (same
+> day). The atlas option below was taken, sharded into ten sheets and committed.
+> Two figures in this section turned out to be wrong: the atlas is **0.81 MB,
+> not ~2 MB**, and sharding it costs nothing, so the "whole-atlas download for
+> three icons" objection does not apply. The section is left as written — it is
+> the record of what was known at the time. **Its consequences below are stale
+> in one respect: "making the repo public stays cheap" is no longer true**, and
+> ADR-0022 says why.
+
 Not committing the PNGs does not merely leave a directory untracked — **it
 leaves the app with no icons anywhere except the machine that ran the
 generator.** A fresh checkout (CI, any deploy) renders empty cells, and the

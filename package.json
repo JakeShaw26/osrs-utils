@@ -20,6 +20,8 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "node --env-file-if-exists=.env.local ./node_modules/drizzle-kit/bin.cjs migrate",
     "db:studio": "node --env-file-if-exists=.env.local ./node_modules/drizzle-kit/bin.cjs studio",
+    "icons": "node scripts/generate-item-icons.mjs && npm run icons:pack",
+    "icons:pack": "node scripts/pack-item-icons.mjs && npm run format",
     "check": "npm run typecheck && npm run lint && npm run format:check && npm run test",
     "test": "vitest run",
     "test:db": "node --env-file-if-exists=.env.local ./node_modules/vitest/vitest.mjs run",
@@ -51,6 +53,7 @@
     "jsdom": "^30.0.0",
     "prettier": "^3.9.6",
     "prettier-plugin-tailwindcss": "^0.8.1",
+    "sharp": "^0.34.5",
     "tailwindcss": "^4.3.3",
     "typescript": "^5",
     "vitest": "^4.1.10"

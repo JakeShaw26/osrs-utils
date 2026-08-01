@@ -100,10 +100,13 @@ losing hiscores access degrades the app rather than breaking it.
 6. **Share-alike (SA)** applies to adapted _content_, not to our source code.
 7. **Never hotlink assets.** Every image we display is served from our own
    origin. Item icons are downloaded by `scripts/generate-item-icons.mjs` in one
-   throttled hand-run (ADR-0021); map tiles remain unresolved (PRD V7).
-   Hotlinking spends their bandwidth on our traffic every time a page renders.
-   **The generator must never run in CI or at build** — that is ~4,600 requests
-   per build, which is the sustained load this section exists to prevent.
+   throttled hand-run (ADR-0021), then packed into committed atlas sheets by
+   `scripts/pack-item-icons.mjs` (ADR-0022); map tiles remain unresolved (PRD
+   V7). Hotlinking spends their bandwidth on our traffic every time a page
+   renders. **The generator must never run in CI or at build** — that is ~4,600
+   requests per build, which is the sustained load this section exists to
+   prevent. The committed atlas is what makes that unnecessary: the build has
+   every icon already and reaches the wiki zero times.
 8. **The icon filename comes from `/mapping`'s `icon` field, never from the item
    name.** 294 of 4,650 differ — `Acorn` is drawn by `Acorn 5.png` — and each
    mismatch is a silent 404.

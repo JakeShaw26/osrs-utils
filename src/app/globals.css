@@ -289,6 +289,9 @@
   .item-icon {
     display: block;
     image-rendering: pixelated;
+    /* One cell out of a packed sheet (ADR-0022). Without `no-repeat` the sheet
+       tiles into every cell the moment an offset lands near an edge. */
+    background-repeat: no-repeat;
   }
 
   .sprite .o {

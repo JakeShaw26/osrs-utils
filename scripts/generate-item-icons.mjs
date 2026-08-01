@@ -1,12 +1,12 @@
 // @ts-check
 /**
- * Downloads the OSRS item icon set into `public/item-icons/<id>.png` and emits
- * the id manifest the app reads.
+ * Downloads the OSRS item icon set into the gitignored cache at
+ * `.icon-cache/<id>.png`, then hands off to the packer.
  *
- * Run after a game update:  node scripts/generate-item-icons.mjs
+ * Run after a game update:  npm run icons
  * Re-download everything:   node scripts/generate-item-icons.mjs --refresh
  *
- * ── What this writes, and the problem it does not solve ─────────────────────
+ * ── What this writes ────────────────────────────────────────────────────────
  *
  * This is the only generator in the repo that writes *art* rather than numbers,
  * which makes it the one place ADR-0007's "copy nothing" rule needed an explicit
@@ -14,13 +14,12 @@
  * the icons are Jagex's, the wiki hosts them under fair use, and we display them
  * on the same tolerated-not-licensed footing we already rely on for hiscores.
  *
- * ⚠️ `public/item-icons/` is GITIGNORED, on the owner's call — 4,646 binaries is
- * too much repo churn. So the PNGs exist only on the machine that ran this, and
- * a fresh checkout (CI, any deploy) has none. **Do not "fix" that by calling
- * this from a build step**: that is ~4,600 wiki requests every build, precisely
- * the "multiple large queries per second for a sustained period" that
- * docs/api-terms.md §2 records as their stated limit. Delivery is an open
- * decision — see ADR-0021 "Delivery is unresolved" and HANDOFF.md.
+ * ⚠️ Nothing this script writes is committed. `.icon-cache/` is a fetch cache;
+ * what ships is the packed atlas that `scripts/pack-item-icons.mjs` builds from
+ * it (ADR-0022). **Do not "fix" a missing cache by calling this from a build
+ * step**: that is ~4,600 wiki requests every build, precisely the "multiple
+ * large queries per second for a sustained period" that docs/api-terms.md §2
+ * records as their stated limit. The atlas exists so the build never needs this.
  *
  * ── Why plain fetch and not osrsFetch() ─────────────────────────────────────
  *
@@ -39,8 +38,7 @@ const USER_AGENT =
   'osrs-clan-toolkit/0.1 (clan tool icon generation; github.com/JakeShaw26/osrs-utils)';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
-const OUT_DIR = join(ROOT, 'public', 'item-icons');
-const MANIFEST = join(ROOT, 'src', 'lib', 'ui', 'item-icons.generated.ts');
+const OUT_DIR = join(ROOT, '.icon-cache');
 
 const MAPPING_URL = 'https://prices.runescape.wiki/api/v1/osrs/mapping';
 const IMAGE_BASE = 'https://oldschool.runescape.wiki/images/';
@@ -197,53 +195,14 @@ async function main() {
     if (failures.length > 20) console.warn(`   …and ${failures.length - 20} more`);
   }
 
-  emitManifest(
-    [...present].sort((a, b) => a - b),
-    mapping.length,
-  );
-}
-
-/**
- * @param {number[]} ids
- * @param {number} mappingSize
- */
-function emitManifest(ids, mappingSize) {
-  // Wrapped at a fixed width rather than one-per-line: Prettier reflows a bare
-  // array anyway, and a 4,600-line diff on every game update buries the handful
-  // of ids that actually changed.
-  const body = [];
-  for (let i = 0; i < ids.length; i += 20) {
-    body.push('  ' + ids.slice(i, i + 20).join(', ') + ',');
-  }
-
-  const source = `/**
- * GENERATED FILE — do not edit by hand.
- *
- * Item ids the generator successfully fetched an icon for, as of
- * ${new Date().toISOString().slice(0, 10)}, via \`node scripts/generate-item-icons.mjs\`
- * over the OSRS Wiki price mapping (${mappingSize} items).
- *
- * This file is ids only — data, not artwork — so it carries none of the
- * licensing weight the PNGs do, which is why it is committed and they are not
- * (ADR-0021). It exists so \`hasItemIcon()\` can answer without touching the
- * filesystem, which a Server Component could do but a Client Component cannot.
- *
- * ⚠️ An id here means "an icon was downloadable", NOT "the file is present in
- * this checkout" — \`public/item-icons/\` is gitignored.
- */
-
-export const ITEM_ICON_IDS: readonly number[] = [
-${body.join('\n')}
-];
-`;
-
-  writeFileSync(MANIFEST, source, 'utf8');
   console.log(
-    `\nwrote ${ids.length} icons, manifest at src/lib/ui/item-icons.generated.ts`,
+    `\ncache now holds ${present.size} icons of ${mapping.length} mapped items`,
   );
-  // Generated TS is Prettier-formatted in this repo (the combat datasets are
-  // too), so a fresh manifest fails `format:check` until this runs.
-  console.log('next: npm run format && npm test');
+  // The download is the slow, throttled, network-bound half; packing is local
+  // and takes seconds. Keeping them separate means a repack — after changing
+  // the cell size, the shard capacity, or the packing order — costs nothing and
+  // never touches the wiki.
+  console.log('next: npm run icons:pack');
 }
 
 await main();

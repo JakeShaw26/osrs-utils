@@ -1,7 +1,6 @@
 import { cn } from '@/lib/utils/cn';
 import {
-  hasItemIcon,
-  itemIconSrc,
+  itemIconPosition,
   ITEM_ICON_CELL,
   type ItemIconScale,
 } from '@/lib/ui/item-icons';
@@ -9,25 +8,30 @@ import {
 /**
  * ATOM — one OSRS item icon, by item id.
  *
- * **This is the same tier as `Sprite`, not the same component.** Both are
- * fixed-palette illustrations that cannot be tinted and therefore can never
- * carry state through colour (ADR-0020). They are separate because the
- * rendering models do not meet: `Sprite` is SVG on a fixed 32 grid, so it scales
- * to any of 16/32/48/64; item icons are rasters trimmed to their content —
- * 18×29, 26×29, 32×31 — with no grid to scale against. Forcing them into
- * `Sprite`'s size union would stretch every icon by a different amount.
+ * **This is tier one of the two-tier icon system** (ADR-0020) — fixed-palette
+ * art that cannot be tinted and can therefore never carry state through colour.
+ * `Icon` is tier two: `currentColor` glyphs that behave like text.
  *
- * So the *cell* is fixed and the artwork sits inside it at natural size. That is
- * also how the game lays them out, which is why a row of them looks right
- * despite the widths all differing.
+ * Item icons are rasters **trimmed to their content** — 18×29, 26×29, 36×32 —
+ * with no grid to scale against, so the *cell* is fixed and the artwork sits
+ * inside it. That is also how the game lays them out, which is why a row of them
+ * looks right despite the widths all differing. (The hand-drawn `Sprite` this
+ * replaced was SVG on a fixed 32 grid; it was removed once the tool groups moved
+ * to real item art. `git show 77e990f` has it.)
  *
- * `slotted` reuses the inventory-slot tokens for the same reason `Sprite` does:
- * OSRS icons are outlined in near-black, which effectively vanishes on a dark
- * surface. On `surface-raised` in dark mode, slot them.
+ * **Why a background offset and not an `<img>` (ADR-0022).** The icons ship as
+ * ten packed sheets rather than 4,646 files, so there is no per-item URL to
+ * point an `<img>` at — the cell is addressed by offset into a sheet. This also
+ * makes a table of 200 items one request instead of 200. The centring that
+ * flexbox used to do is baked into the sheet at pack time, at integer offsets.
  *
- * ACCESSIBILITY. `name` becomes the alt text. Omit it only when a visible label
- * beside the icon already says the item name — then it is decorative and gets
- * `alt=""`, avoiding "Abyssal whip Abyssal whip".
+ * `slotted` floats the icon in an inventory slot: OSRS icons are outlined in
+ * near-black, roughly 1.1:1 against a near-black surface, so the silhouette
+ * dissolves without it. On `surface-raised` in dark mode, slot them.
+ *
+ * ACCESSIBILITY. `name` becomes the accessible name. Omit it when a visible
+ * label beside the icon already says the item name — then it is decorative and
+ * announces nothing, avoiding "Abyssal whip Abyssal whip".
  */
 
 interface ItemIconProps {
@@ -44,10 +48,15 @@ interface ItemIconProps {
 
 export function ItemIcon({ id, name, scale = 1, slotted, className }: ItemIconProps) {
   const cell = ITEM_ICON_CELL * scale;
-  const known = hasItemIcon(id);
+  const position = itemIconPosition(id);
 
   return (
     <span
+      /* Only artwork gets announced as an image. An id we have no icon for
+         renders an empty cell, and calling that "Abyssal whip, image" would
+         describe something the user cannot see. */
+      role={position && name ? 'img' : undefined}
+      aria-label={position && name ? name : undefined}
       className={cn(
         'inline-flex shrink-0 items-center justify-center',
         slotted &&
@@ -56,32 +65,25 @@ export function ItemIcon({ id, name, scale = 1, slotted, className }: ItemIconPr
       )}
       style={{ width: cell, height: cell }}
     >
-      {known ? (
-        /*
-         * `next/image` is the wrong tool here, not merely unnecessary — it
-         * resamples and re-encodes, which is precisely what destroys pixel art,
-         * and `image-rendering: pixelated` cannot undo a resampled source. The
-         * files are also ~400 bytes, smaller than the request headers asking
-         * for them, and Vercel bills image optimisation per source image, so
-         * 4,650 of them would cost real money to make worse. (ADR-0021)
-         */
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
+      {position ? (
+        <span
           className="item-icon"
-          src={itemIconSrc(id)}
-          alt={name ?? ''}
-          /* Natural size, centred — the cell above reserves the space, so there
-             is nothing to shift when the image lands and no dimensions to store.
-             `scale(2)` doubles it without the layout knowing or caring. */
-          style={scale === 1 ? undefined : { transform: `scale(${scale})` }}
-          loading="lazy"
-          decoding="async"
+          style={{
+            width: ITEM_ICON_CELL,
+            height: ITEM_ICON_CELL,
+            backgroundImage: `url(${position.src})`,
+            backgroundPosition: `-${position.x}px -${position.y}px`,
+            /* The cell stays at its natural size and is scaled up, rather than
+               scaling the sheet and recomputing offsets against it — one number
+               to get wrong instead of three, and `scale(2)` on nearest-neighbour
+               art doubles pixels exactly. */
+            ...(scale === 1 ? null : { transform: `scale(${scale})` }),
+          }}
         />
       ) : (
-        /* An id with no committed icon renders an empty cell, not a broken
-           image. Untradeable ids reach us from drop tables and clue rewards,
-           and the price mapping only covers tradeables — so this is an expected
-           state, not an error. */
+        /* Untradeable ids reach us from drop tables and clue rewards, and the
+           price mapping only covers tradeables — so this is an expected state,
+           not an error. */
         <span aria-hidden="true" className="text-2xs text-content-subtle">
           ?
         </span>
