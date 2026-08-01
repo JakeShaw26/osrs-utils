@@ -4,8 +4,8 @@ Snapshot for picking this up cold. **Living context is [`CLAUDE.md`](./CLAUDE.md
 read that first; this file covers what just happened and what to do next.
 
 This replaces the 2026-07-31 handoff, whose first instruction was "look at the
-sprites". That was done, they were rejected, and replacing them is what this
-session became.
+sprites". That was done, they were rejected, replacing them became the session,
+and by the end the sprite system itself was deleted.
 
 > ## ✅ Resume point: the landing page shows real item art. Start at economy.
 >
@@ -16,8 +16,15 @@ session became.
 > ([ADR-0023](./docs/adr/0023-retire-the-hand-drawn-sprite-system.md)).
 > 1,133 passing, lint/typecheck/format/build clean.
 >
+> **Everything is pushed.** Three commits on `docs/handoff-2026-07-31` —
+> `77e990f` (ItemIcon), `efaf60a` (atlas delivery), `1032e94` (tool groups +
+> sprite removal). ⚠️ **The branch name describes only its first commit**, and it
+> is not merged. Rename it or open the PR before it collects a fourth unrelated
+> commit.
+>
 > **Next: wire `ItemIcon` into `/economy/prices` and `/economy/items/[id]`.**
 > They already hold item ids, so it is display only — no new data, no new fetch.
+> Full detail in [Next steps](#next-steps) below.
 >
 > **⚠️ One decision this spent:** Jagex artwork is now in git history, so "make
 > the repo public" to unlock branch protection is effectively foreclosed. That
@@ -47,9 +54,11 @@ and rendering on the landing page. The sprite system (`Sprite`, `SpriteSheet`,
 | `scripts/pack-item-icons.mjs`           | Packs the cache into ten content-hashed sheets and writes the manifest                                           |
 | `src/lib/ui/item-icons.ts`              | `hasItemIcon` / `itemIconPosition`, over the manifest's **ids and geometry**                                     |
 | `src/components/atoms/ItemIcon.tsx`     | Fixed 36px cell, `scale={1\|2}`, background offset into a sheet                                                  |
-| `.item-icon` in `globals.css`           | `image-rendering: pixelated` + `no-repeat` — the raster peer of `.sprite`                                        |
+| `.item-icon` in `globals.css`           | `image-rendering: pixelated` + `no-repeat`. The `.sprite` palette beside it is gone                              |
 | `item-icons.atlas.test.ts`              | Eight guards that read the committed **pixels**, none of them skippable                                          |
-| ADR-0021, ADR-0022 (+ index, CLAUDE.md) | The licensing position, the hard-rule-#9 carve-out, and delivery                                                 |
+| `lib/navigation/tools.ts`               | `TOOL_GROUPS` carries an **item id** per group; its test asserts each has artwork                                |
+| **Deleted**                             | `Sprite`, `SpriteSheet`, `lib/ui/sprites.ts`, the `.sprite` palette — nothing called them (ADR-0023)             |
+| ADR-0021/0022/0023 (+ index, CLAUDE.md) | Licensing, the hard-rule-#9 carve-out, delivery, and retiring the sprites                                        |
 
 ---
 
@@ -64,9 +73,9 @@ changed the design:
   `Abyssal bracelet.png`. Deriving would have produced 294 silent 404s. **Never
   derive this.**
 - **Item icons are not on a grid.** They are trimmed to content — widths 18–36,
-  heights 29–32 — so they could not simply reuse `Sprite`, whose whole size
-  union rests on a fixed 32 grid. The cell is fixed instead, and the artwork
-  sits inside it.
+  heights 29–32 — so they could not simply reuse `Sprite` (then still alive,
+  deleted later the same session), whose whole size union rested on a fixed 32
+  grid. The cell is fixed instead, and the artwork sits inside it.
 - **⚠️ The cell is 36 because that is the game's, not because a sample said so.**
   A partial sample topped out at 32×31; the full set reaches exactly **36×32**.
   Sizing from the measurement would have clipped the widest icons in the app and
@@ -113,51 +122,58 @@ keeps the option (object storage) is blocked on V13.
 
 ## Next steps
 
-### ~~First — the blocker~~ Done: delivery is the atlas
+Both blockers from the last handoff are closed — icon delivery (ADR-0022) and
+the tool groups (ADR-0023). What follows is the fresh list.
 
-1. **~~Decide icon delivery.~~** Resolved as ten packed sheets
-   ([ADR-0022](./docs/adr/0022-item-icon-delivery-packed-atlas.md)). Two numbers
-   in ADR-0021's options table turned out wrong and changed the answer: the
-   atlas is **0.81 MB, not ~2 MB** (4,646 separate PNGs each carry their own
-   header and zlib dictionary; one stream shares them), and **sharding it costs
-   nothing** — ten sheets total 0.80 MB against 0.81 MB for one. So the "whole
-   atlas for a page showing three icons" objection evaporated: three icons now
-   cost ≤3×82 KB, and one sheet would have meant a 24 MB RGBA decode to show a
-   single whip.
+### 1. Wire `ItemIcon` into economy — start here
 
-### ~~Then — both of these~~ One done, one next
+The smallest useful next change, and the one that proves the atlas in a real
+data-bearing route rather than on six hand-picked ids. **Display only: no new
+data, no new fetch, no upstream cost.** Every call site already has `item.id`.
 
-2. **~~Re-point the tool groups at real item icons.~~ Done.** `TOOL_GROUPS`
-   carries an **item id** per group, the landing page renders `ItemIcon`, and the
-   sprite system is deleted (ADR-0023).
+The three places:
 
-   **⚠️ The trap this hit, because it will recur.** The two ids the previous
-   handoff suggested — **995 (Coins)** and **2677 (Clue scroll)** — have **no
-   icon**. The generator reads the GE price mapping, which covers **tradeables
-   only**, and neither is GE-tradeable; both would have rendered the empty `?`
-   cell in the most visible place in the app. `tools.test.ts` now asserts every
-   group id has packed artwork, and that guard was mutation-checked — point
-   Economy at 995 and it fails with `[ 'Economy (995)' ]`.
+| File                                    | Where                                        |
+| --------------------------------------- | -------------------------------------------- |
+| `organisms/economy/ItemPriceTable.tsx`  | Beside the item name in each row             |
+| `organisms/economy/AlchProfitTable.tsx` | Same — it already links to `/economy/items/` |
+| `organisms/economy/ItemOverview.tsx`    | The item detail header. `scale={2}` here     |
 
-   What landed, chosen for distinct silhouette **and** distinct hue, checked
-   rendered at 36px in both themes: **2357** gold bar (Economy), **4587** dragon
-   scimitar (Combat), **405** casket (Clues), **1275** rune pickaxe (Skilling),
-   **970** papyrus (Quests), **2434** prayer potion (Utility). A hammer was
-   rejected for Utility because at 36px its silhouette is the pickaxe's.
+Four things to get right, all of them already-known traps:
 
-3. **Wire `ItemIcon` into economy — start here.** `/economy/prices` and
-   `/economy/items/[id]` already have item ids in hand, so it is a display change
-   with no new data and no new fetch.
+- **Omit `name`.** The row prints the item name next to the icon, so passing it
+  announces "Abyssal whip Abyssal whip". Decorative is the correct choice here
+  and `ItemIcon` handles it — that is what the "is decorative when it has no
+  name" test pins.
+- **`slotted` on dark surfaces only.** The near-black outline is ~1.1:1 on a
+  near-black surface. Check the table's actual surface token before deciding;
+  do not slot everything reflexively, it is a visible box.
+- **A 36px cell changes row height.** Check the `.tabular` GP columns still line
+  up and the table does not suddenly scroll on mobile.
+- **These are Server Components — keep them that way.** The manifest is ~28 KB
+  and reaches the client bundle only if a Client Component imports it.
 
-### Then — the ADR-0020 step that is still open
+Expect a **missing icon in the tables** and make sure it looks deliberate: the
+price feed is tradeables-only so coverage is near-total there, but
+`/economy/items/[id]` takes an id from the URL and will meet ids with no
+artwork.
 
-4. **Page-level layout and navigation.** Unchanged from the last two handoffs
-   and still the largest, least reversible piece. There is **no global nav at
-   all** — every page is reached from the landing page or by URL. `Icon` exists
-   for chrome; `ItemIcon` now exists for content.
-5. **Marble texture**, which needs the layout first. Never behind data.
+### 2. Page-level layout and navigation — the last ADR-0020 step
 
-### Phase B's menu — unchanged, still unblocked
+Unchanged from the last three handoffs and still the largest, least reversible
+piece. There is **no global nav at all** — every page is reached from the
+landing page or by URL. `Icon` exists for chrome; `ItemIcon` now exists for
+content, and `TOOL_GROUPS` is already the nav's data model, so the directory
+does not need reinventing.
+
+Note `app/layout.tsx` is now nearly bare — the `SpriteSheet` that used to sit in
+it is gone, so there is a clean place to put a header.
+
+### 3. Marble texture
+
+Needs the layout first. Never behind data.
+
+### Then — Phase B's menu, unchanged and still unblocked
 
 - **Roster page.** Still the highest-value thing not built: `sortByRank` /
   `groupByRank` over the WOM group, surfacing `player.updatedAt`.
@@ -216,7 +232,12 @@ Unchanged. **Resolved: V1, V3, V9, V9b, V11, V14.** Moot: V11a, V4.
   not a curated list.
 - **`shape-rendering: crispEdges` and `image-rendering: pixelated` are not
   interchangeable.** The first is SVG-only and does nothing to a raster; the
-  second does nothing to an SVG. `Sprite` needs one, `ItemIcon` the other.
+  second does nothing to an SVG. `Icon` (SVG) needs one, `ItemIcon` the other.
+- **The icon set is GE-tradeables only**, and this is the trap most likely to
+  bite next. No coins, no clue scrolls, no quest capes, no diary rewards, no
+  skill icons — the generator reads the price mapping, and untradeables are
+  simply not in it. Check `hasItemIcon()` before committing to an id, and assert
+  it in a test the way `tools.test.ts` does.
 - **Throttle with a shared cursor, not a per-worker sleep.** `await sleep(delay)`
   inside N workers gives N× the intended rate — the classic way a "throttled"
   scraper turns out not to be.
@@ -246,14 +267,11 @@ Unchanged. **Resolved: V1, V3, V9, V9b, V11, V14.** Moot: V11a, V4.
   (`Icon`) are `currentColor` and can. Never put one beside the other at the
   same size.
 - **Item icons need the inventory slot on dark.** The near-black outline is
-  ~1.1:1 on a near-black surface.
-- **The icon set is GE-tradeables only.** No coins, no clue scrolls, no quest
-  capes, no diary rewards, no skill icons — the generator reads the price
-  mapping, and untradeables are simply not in it. Check `hasItemIcon()` before
-  committing to an id, and assert it in a test.
+  ~1.1:1 on a near-black surface. `--sprite-slot` is still its token name, which
+  now outlives the sprites — deliberate, see ADR-0023.
 - **ADRs are point-in-time.** ADR-0008 still names `--osrs-slate-900`; ADR-0020
-  still says sprites must be original art, with a forward pointer to ADR-0021
-  rather than an edit.
+  still describes a `Sprite` component that no longer exists, with forward
+  pointers to ADR-0021 and ADR-0023 rather than an edit.
 - **The dev server must be stopped before `next build`** — both use `.next/`.
 - **`force-dynamic` is not a caching-neutral flag.** Use
   `fetchCache = 'default-cache'` + `connection()`.
@@ -291,3 +309,17 @@ the manifest template. Any one of those left stale would have been a document
 confidently stating the opposite of the truth — which is worse than no document,
 and is exactly what `components/README.md` was doing about sprites before this
 session touched it.
+
+And a third, added when the atlas landed: **an estimate built by summing parts
+is not a measurement.** ADR-0021 priced the atlas at ~2 MB by adding up 4,646
+files and, on that number, wrote the objection that nearly ruled it out. The
+real figure is 0.81 MB, because the thing being estimated — shared compression —
+is precisely what disappears when you treat a whole as the sum of its pieces.
+The reason this belongs beside the 36×32 lesson is that they are the same error
+in opposite directions: one trusted a sample as a ceiling, the other trusted
+arithmetic as a substitute for trying it. **Both were settled in under a minute
+by actually running the thing.**
+
+The cheapest guard this session bought was also the least clever: asserting that
+every id the tool directory names has artwork. It cost four lines and
+immediately caught two of them.
