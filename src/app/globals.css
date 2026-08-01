@@ -261,31 +261,23 @@
     font-family: var(--font-mono);
   }
 
-  /* --- Feature sprite palette (ADR-0020) ---------------------------------
+  /* --- Item icons (ADR-0021, ADR-0022) -----------------------------------
    *
-   * ⚠️ These are FIXED HEX ON PURPOSE and must never become tokens.
+   * The hand-drawn `.sprite` palette that stood here was removed with the
+   * sprites themselves; `git show 77e990f:src/app/globals.css` has it if the
+   * fixed-palette illustration idea ever comes back.
    *
-   * Feature sprites are illustrations, not glyphs: multi-colour, fixed palette,
-   * byte-identical in both themes, exactly like the game's own item sprites.
-   * That is why they can never carry state (disabled, active, danger) through
-   * colour — state lives on the container. Point one of these at a semantic
-   * token and the sprite starts changing with the theme, which is the bug this
-   * comment exists to prevent. `sprite-palette.test.ts` fails if you do.
+   * ⚠️ Item icons carry no theme-aware colour and never can — they are Jagex's
+   * rasters. That is why they cannot signal state (disabled, active, danger)
+   * through colour: state lives on the container. Contrast in dark mode comes
+   * from the inventory slot around the icon, not from recolouring it — see
+   * `--sprite-slot`, whose name outlived the sprites.
    *
-   * Contrast in dark mode comes from the inventory slot around the sprite, not
-   * from recolouring it — see `--sprite-slot`.
+   * `image-rendering: pixelated` is load-bearing: item icons are ~30px game art
+   * and the default smooth filter turns them to mush the moment anything scales
+   * them. (`shape-rendering: crispEdges` is the SVG-only equivalent and does
+   * nothing to a raster — the two are not interchangeable.)
    * --------------------------------------------------------------------- */
-  .sprite {
-    display: block;
-    /* Without this the browser anti-aliases the staircase and it stops being
-       pixel art. It is the single most load-bearing line in the sprite system. */
-    shape-rendering: crispEdges;
-  }
-
-  /* The raster equivalent of the line above, and just as load-bearing. Item
-     icons are ~30px PNGs from the game; the default smooth filter turns them to
-     mush the moment anything scales them. `crispEdges` is SVG-only and does
-     nothing here — these two properties are not interchangeable. (ADR-0021) */
   .item-icon {
     display: block;
     image-rendering: pixelated;
@@ -293,57 +285,4 @@
        tiles into every cell the moment an offset lands near an edge. */
     background-repeat: no-repeat;
   }
-
-  .sprite .o {
-    fill: #1b1206;
-  } /* outline */
-  .sprite .g {
-    fill: #e8b23a;
-  } /* gold */
-  .sprite .gh {
-    fill: #ffe28a;
-  }
-  .sprite .gl {
-    fill: #a8761b;
-  }
-  .sprite .st {
-    fill: #5da9c0;
-  } /* steel */
-  .sprite .sth {
-    fill: #a5e0ee;
-  }
-  .sprite .stl {
-    fill: #2f6b80;
-  }
-  .sprite .ir {
-    fill: #7b7b86;
-  } /* iron */
-  .sprite .irh {
-    fill: #b3b3bd;
-  }
-  .sprite .irl {
-    fill: #4a4a53;
-  }
-  .sprite .wd {
-    fill: #6b4423;
-  } /* wood */
-  .sprite .pg {
-    fill: #e8d9a8;
-  } /* parchment */
-  .sprite .pgh {
-    fill: #f7ecc9;
-  }
-  .sprite .pgl {
-    fill: #bda878;
-  }
-  .sprite .rd {
-    fill: #a01c1c;
-  } /* wax / ribbon */
-  .sprite .rdh {
-    fill: #c93a3a;
-  }
-  .sprite .gls {
-    fill: #8fb9c4;
-    opacity: 0.5;
-  } /* glass */
 }

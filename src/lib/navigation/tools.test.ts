@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { SPRITE_NAMES } from '@/lib/ui/sprites';
+import { hasItemIcon } from '@/lib/ui/item-icons';
 import { readdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { TOOL_GROUPS, allToolHrefs } from './tools';
@@ -111,20 +111,27 @@ describe('tool directory links', () => {
     }
   });
 
-  it('gives every group a sprite that exists in the vocabulary', () => {
-    // TypeScript already refuses an unknown name, but only in files it checks.
-    // This also fails if a name is removed from SPRITE_NAMES while a group
-    // still references it, which is the direction the type cannot catch.
-    for (const group of TOOL_GROUPS) {
-      expect(SPRITE_NAMES).toContain(group.sprite);
-    }
+  /**
+   * The check that pays for itself.
+   *
+   * `itemId` is a plain number, so the type system cannot tell a real item from
+   * a plausible one. The icon set is built from the GE price mapping, which
+   * covers **tradeables only** — and the two ids this directory first reached
+   * for, 995 (Coins) and 2677 (Clue scroll), are both untradeable and have no
+   * artwork. Either would have rendered an empty cell in the most visible place
+   * in the app, and every other test here would still have passed.
+   */
+  it('gives every group an item id with real packed artwork', () => {
+    const missing = TOOL_GROUPS.filter((group) => !hasItemIcon(group.itemId));
+
+    expect(missing.map((group) => `${group.heading} (${group.itemId})`)).toEqual([]);
   });
 
-  it('gives each group a distinct sprite', () => {
-    // Two groups sharing a sprite makes the directory unreadable at a glance —
+  it('gives each group a distinct icon', () => {
+    // Two groups sharing an icon makes the directory unreadable at a glance —
     // and it renders perfectly, so nothing else would notice.
-    const sprites = TOOL_GROUPS.map((group) => group.sprite);
+    const ids = TOOL_GROUPS.map((group) => group.itemId);
 
-    expect(new Set(sprites).size).toBe(sprites.length);
+    expect(new Set(ids).size).toBe(ids.length);
   });
 });

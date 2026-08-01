@@ -5,17 +5,18 @@ Updating this is part of the definition of done for any architectural change.
 
 **Last updated:** 2026-08-01
 **Current phase:** **Phase B complete; the ADR-0020 redesign is 3 of 4 steps in.**
-All six feature slices are on `origin/main` — **27 routes, 1138 tests**, CI
+All six feature slices are on `origin/main` — **27 routes, 1133 tests**, CI
 green. The palette is re-pointed to Nero Marquina in both themes, the labelled
 fields are de-duplicated, and `ItemIcon` brings real OSRS item art in by item id
-(ADR-0021). **Page-level layout and navigation is still the remaining ADR-0020
-step.** The rate-limit migration is applied to local Postgres and
-`enforceRateLimit()` is verified end-to-end (20 requests pass, the 21st gets a
-429).
+(ADR-0021), delivered as ten committed atlas sheets (ADR-0022). **Page-level
+layout and navigation is still the remaining ADR-0020 step.** The rate-limit
+migration is applied to local Postgres and `enforceRateLimit()` is verified
+end-to-end (20 requests pass, the 21st gets a 429).
 
-**⛔ One thing is blocked:** the item icons are gitignored, so a fresh checkout
-has none and `ItemIcon` renders empty cells everywhere. **Decide delivery before
-using it in a route** — see [`HANDOFF.md`](./HANDOFF.md) and ADR-0021.
+**Icon delivery is no longer blocking.** The atlas is committed, so a fresh
+checkout has icons and `ItemIcon` is safe to use in a route. **One consequence
+to know:** Jagex artwork is now in git, so "make the repo public" to unlock
+branch protection is effectively foreclosed — see ADR-0022.
 
 ---
 
@@ -72,13 +73,14 @@ Full requirements: [`PRD.md`](./PRD.md). Decisions: [`docs/adr/`](./docs/adr/).
 9. **Never copy third-party source into this repo.** Call APIs; where none
    exists, implement from published formulas. ([ADR-0007](./docs/adr/0007-api-first-no-code-redistribution.md))
    _One documented exception,_ **item artwork**: we display Jagex's item icons,
-   written only by `scripts/generate-item-icons.mjs` and served same-origin.
-   That is a deliberate, owner-approved extension of the "tolerated ≠ licensed"
-   bet, scoped to icons ([ADR-0021](./docs/adr/0021-osrs-item-icons-by-id.md)).
-   It does not license copying anything else — least of all code.
-   **`public/item-icons/` is gitignored, so a fresh checkout has no icons and
-   delivery is an open problem** — do not wire `ItemIcon` into a route until it
-   is solved. Re-fetching per build is not the answer (~4,600 wiki requests).
+   written only by `scripts/generate-item-icons.mjs`, packed by
+   `scripts/pack-item-icons.mjs` and served same-origin. That is a deliberate,
+   owner-approved extension of the "tolerated ≠ licensed" bet, scoped to icons
+   ([ADR-0021](./docs/adr/0021-osrs-item-icons-by-id.md),
+   [ADR-0022](./docs/adr/0022-item-icon-delivery-packed-atlas.md)). It does not
+   license copying anything else — least of all code. Never re-fetch per build
+   (~4,600 wiki requests); the committed atlas exists so the build never needs
+   the wiki.
 10. **[`docs/api-terms.md`](./docs/api-terms.md) is binding.** Non-commercial,
     read-only, self-limiting, honest identification. Treat its rules like
     "don't commit secrets" — if a task seems to require breaking one, stop and
@@ -114,7 +116,9 @@ Full requirements: [`PRD.md`](./PRD.md). Decisions: [`docs/adr/`](./docs/adr/).
 | Quest data       | Authored requirement graph; completion is self-declared            | [0018](./docs/adr/0018-authored-quest-requirements-graph.md)           |
 | Authored rules   | Versioned, sourced, confidence-graded — never bare constants       | [0019](./docs/adr/0019-versioned-authored-game-rules.md)               |
 | Visual direction | **B · Nero Marquina.** Layer 1 re-point only; light is first-class | [0020](./docs/adr/0020-nero-marquina-visual-direction.md)              |
-| Item artwork     | Real OSRS icons by item id, same-origin. **Delivery unresolved**   | [0021](./docs/adr/0021-osrs-item-icons-by-id.md)                       |
+| Item artwork     | Real OSRS icons by item id, same-origin                            | [0021](./docs/adr/0021-osrs-item-icons-by-id.md)                       |
+| Icon delivery    | Ten committed atlas sheets; index in the manifest = cell           | [0022](./docs/adr/0022-item-icon-delivery-packed-atlas.md)             |
+| Feature sprites  | **Deleted.** `ItemIcon` is all of tier one now                     | [0023](./docs/adr/0023-retire-the-hand-drawn-sprite-system.md)         |
 
 ### Consequences of "no auth" that are easy to forget
 
@@ -255,43 +259,46 @@ in commit **`5202810`**. If auth ever returns, recover rather than rewrite —
 `src/app/<feature>/` segment.
 
 **Atoms:** `Button`, `Input`, `Select`, `Table` (+ cells), `PriceTag`,
-`StatBadge`, `Sprite`, `Icon`, `SpriteSheet`, `ItemIcon` — check
+`StatBadge`, `Icon`, `ItemIcon` — check
 [`src/components/README.md`](./src/components/README.md) before writing a new
 one; it carries a full per-slice inventory. **The labelled-field duplication is
 resolved**: one `molecules/NumericField` and one `molecules/SelectField` replace
 the five that six parallel agents wrote. Don't add a slice-local one.
 
-**Two icon tiers, and they never mix.** `Sprite` is a fixed-palette illustration
-— not tintable, so it can never carry state through colour; sizes 16/32/48/64
-only, and it needs `slotted` on dark surfaces. `Icon` is a `currentColor` glyph
-and behaves like text. (ADR-0020)
+**Two icon tiers, and they never mix.** `ItemIcon` is tier one: fixed-palette
+game art, not tintable, so it can never carry state through colour, and it needs
+`slotted` on dark surfaces. `Icon` is tier two — a `currentColor` glyph that
+behaves like text. (ADR-0020). **The hand-drawn `Sprite` system is deleted**
+(ADR-0023); recover from `77e990f` rather than redrawing if it is ever wanted.
 
-**`ItemIcon` is tier one, but not a `Sprite`.** Real OSRS item icons are rasters
-trimmed to their content, so there is no grid to scale against — the _cell_ is
-fixed (36px, `scale={1|2}`) and the artwork sits inside at natural size. It
-takes an **item id**, not a name, and renders an empty cell for an id with no
-committed icon (untradeables reach us from drop tables; the mapping only covers
-tradeables). Never point one at the wiki. (ADR-0021)
+**`ItemIcon` takes an item id, not a name.** Real OSRS icons are rasters trimmed
+to their content, so there is no grid to scale against — the _cell_ is fixed
+(36px, `scale={1|2}`) and the artwork sits inside it. It renders an empty cell
+for an id with no packed icon; **the set covers GE-tradeables only**, so coins,
+clue scrolls, quest capes and diary rewards have no icon at all. Never point one
+at the wiki. (ADR-0021, ADR-0022)
 
-1125 tests. The escaping and IP-spoofing tests encode behaviour verified against
+**The icon manifest's order is load-bearing.** An id's index in `ITEM_ICON_IDS`
+**is** its cell in the atlas, so sorting or filtering that array without running
+`npm run icons:pack` repoints every icon after the edit at the wrong item — and
+that renders as artwork, not as an error. `item-icons.atlas.test.ts` reads the
+committed pixels to catch it. (ADR-0022)
+
+1133 tests. The escaping and IP-spoofing tests encode behaviour verified against
 live APIs; `ranks.test.ts` uses the real Void Reavers `roleOrders` fixture.
 
 ## Next tasks
 
 Full detail in [`HANDOFF.md`](./HANDOFF.md).
 
-1. **⛔ Decide icon delivery** — blocks 2 and 3. ADR-0021 → "Delivery is
-   unresolved". A packed atlas is the recommendation.
-2. **Re-point `TOOL_GROUPS` at item ids** so the tool directory uses real item
-   art; retires the seven hand-drawn sprites and `SpriteSheet`.
-3. **Wire `ItemIcon` into `/economy/prices` and `/economy/items/[id]`** — they
+1. **Wire `ItemIcon` into `/economy/prices` and `/economy/items/[id]`** — they
    already hold item ids, so it is display only, no new fetch.
-4. **Page-level layout and navigation** — the last ADR-0020 step. There is no
+2. **Page-level layout and navigation** — the last ADR-0020 step. There is no
    global nav at all today; every page is reached from the landing page or a URL.
-5. **Marble texture**, which needs the layout first. Never behind data.
-6. **Roster page** over `sortByRank`/`groupByRank`, surfacing
+3. **Marble texture**, which needs the layout first. Never behind data.
+4. **Roster page** over `sortByRank`/`groupByRank`, surfacing
    `player.updatedAt` so staleness is visible rather than implied.
-7. **`pruneRateLimitCounters()` job** behind `CRON_SECRET`.
+5. **`pruneRateLimitCounters()` job** behind `CRON_SECRET`.
 
 ## CI
 

@@ -7,23 +7,27 @@ This replaces the 2026-07-31 handoff, whose first instruction was "look at the
 sprites". That was done, they were rejected, and replacing them is what this
 session became.
 
-> ## ⛔ Resume point: the icons exist, but only on one machine
+> ## ✅ Resume point: the landing page shows real item art. Start at economy.
 >
-> **`ItemIcon` is built and tested — real OSRS item art, addressed by item id.**
-> 4,646 icons, 13 new tests, 1,138 passing, lint/typecheck/format/build clean.
+> **The icons ship as ten committed atlas sheets** — 822 KB total, 4,645 icons,
+> `public/item-icons/atlas-<n>-<hash>.png` ([ADR-0022](./docs/adr/0022-item-icon-delivery-packed-atlas.md)).
+> A fresh checkout has icons; CI and any deploy have icons. **The tool groups
+> carry item ids and the seven rejected sprites are deleted**
+> ([ADR-0023](./docs/adr/0023-retire-the-hand-drawn-sprite-system.md)).
+> 1,133 passing, lint/typecheck/format/build clean.
 >
-> **`public/item-icons/` is gitignored**, on the owner's call — 4,646 binaries is
-> too much repo churn. The consequence is not cosmetic: **a fresh checkout has no
-> icons at all**, so CI, any deploy, and any other machine render empty cells.
+> **Next: wire `ItemIcon` into `/economy/prices` and `/economy/items/[id]`.**
+> They already hold item ids, so it is display only — no new data, no new fetch.
 >
-> **Decide delivery before writing a single line of feature code.** Wiring
-> `ItemIcon` into a route first means building on something that only works
-> where you happen to be sitting. Options and the recommendation are in
-> [ADR-0021](./docs/adr/0021-osrs-item-icons-by-id.md) → _"Delivery is
-> unresolved"_.
+> **⚠️ One decision this spent:** Jagex artwork is now in git history, so "make
+> the repo public" to unlock branch protection is effectively foreclosed. That
+> leaves **pay for GitHub Pro** or **accept that CI reports rather than blocks**.
+> ADR-0022 has the reasoning; the option would come back if the sheets ever move
+> to object storage (blocked on V13).
 >
-> To get icons locally right now: `node scripts/generate-item-icons.mjs`
-> (~10 min, incremental — a second run costs 5 requests, not 4,650).
+> To refresh icons after a game update: `npm run icons` (~10 min, incremental —
+> a second run costs a handful of requests, not 4,650). To repack without
+> fetching: `npm run icons:pack`.
 >
 > **Page-level layout and navigation is still the open ADR-0020 step.** It did
 > not move today. Don't lose it.
@@ -32,18 +36,20 @@ session became.
 
 ## Executive summary
 
-The hand-drawn sprites from ADR-0020 were reviewed and rejected on quality. The
-replacement is Jagex's own item art, and the session's real output is
-infrastructure rather than a visible change: **nothing renders an `ItemIcon`
-yet**, so the landing page still shows the seven sprites you didn't like.
+The hand-drawn sprites from ADR-0020 were reviewed and rejected on quality. They
+are now **gone** — replaced by Jagex's own item art, delivered as a packed atlas
+and rendering on the landing page. The sprite system (`Sprite`, `SpriteSheet`,
+`sprites.ts`, the `.sprite` palette) was deleted once nothing called it.
 
-| Built                               | What                                                                    |
-| ----------------------------------- | ----------------------------------------------------------------------- |
-| `scripts/generate-item-icons.mjs`   | Hand-run, incremental, throttled ~8 req/s with widening 403/429 backoff |
-| `src/lib/ui/item-icons.ts`          | `hasItemIcon` / `itemIconSrc`, over a committed **id manifest**         |
-| `src/components/atoms/ItemIcon.tsx` | Fixed 36px cell, `scale={1\|2}`, empty cell for an unknown id           |
-| `.item-icon` in `globals.css`       | `image-rendering: pixelated` — the raster peer of `.sprite`             |
-| ADR-0021 (+ index, CLAUDE.md)       | The licensing position and the hard-rule-#9 carve-out                   |
+| Built                                   | What                                                                                                             |
+| --------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `scripts/generate-item-icons.mjs`       | Hand-run, incremental, throttled ~8 req/s with widening 403/429 backoff. Now fills the gitignored `.icon-cache/` |
+| `scripts/pack-item-icons.mjs`           | Packs the cache into ten content-hashed sheets and writes the manifest                                           |
+| `src/lib/ui/item-icons.ts`              | `hasItemIcon` / `itemIconPosition`, over the manifest's **ids and geometry**                                     |
+| `src/components/atoms/ItemIcon.tsx`     | Fixed 36px cell, `scale={1\|2}`, background offset into a sheet                                                  |
+| `.item-icon` in `globals.css`           | `image-rendering: pixelated` + `no-repeat` — the raster peer of `.sprite`                                        |
+| `item-icons.atlas.test.ts`              | Eight guards that read the committed **pixels**, none of them skippable                                          |
+| ADR-0021, ADR-0022 (+ index, CLAUDE.md) | The licensing position, the hard-rule-#9 carve-out, and delivery                                                 |
 
 ---
 
@@ -95,33 +101,53 @@ that bet from data to art. Two facts worth not re-deriving:
   ships icons under CC BY-NC-SA 3.0 while its own README says they are Jagex's
   property. It cannot license what it does not own.
 
-**One consequence worth keeping in view:** because the PNGs are _not_ committed,
-"make the repo public" stays a cheap option for unlocking branch protection.
-Committing them would have turned that into publishing a Jagex art mirror.
+**⚠️ One consequence, and it was spent the same day.** While the PNGs were
+uncommitted, "make the repo public" stayed a cheap option for unlocking branch
+protection. **The atlas sheets are committed, so it is no longer** — publishing
+the repo would publish ~4,645 Jagex icons as a downloadable archive, which is a
+materially different act from a site displaying them. ADR-0022 took that trade
+deliberately, because delivery blocked every feature and the alternative that
+keeps the option (object storage) is blocked on V13.
 
 ---
 
 ## Next steps
 
-### First — the blocker
+### ~~First — the blocker~~ Done: delivery is the atlas
 
-1. **Decide icon delivery.** ADR-0021's _"Delivery is unresolved"_ table has
-   three options. The recommendation is **one packed atlas + an offset map**:
-   the objection was file _count_, and an atlas is the only option that answers
-   file count without moving the cost onto the wiki. It changes `ItemIcon`'s
-   internals (`background-position` rather than `<img src>`) and costs a
-   whole-atlas download on pages showing few icons — that is the trade to weigh.
+1. **~~Decide icon delivery.~~** Resolved as ten packed sheets
+   ([ADR-0022](./docs/adr/0022-item-icon-delivery-packed-atlas.md)). Two numbers
+   in ADR-0021's options table turned out wrong and changed the answer: the
+   atlas is **0.81 MB, not ~2 MB** (4,646 separate PNGs each carry their own
+   header and zlib dictionary; one stream shares them), and **sharding it costs
+   nothing** — ten sheets total 0.80 MB against 0.81 MB for one. So the "whole
+   atlas for a page showing three icons" objection evaporated: three icons now
+   cost ≤3×82 KB, and one sheet would have meant a 24 MB RGBA decode to show a
+   single whip.
 
-### Then — both of these, in this order
+### ~~Then — both of these~~ One done, one next
 
-2. **Re-point the tool groups at real item icons.** This is what actually fixes
-   the original complaint. `TOOL_GROUPS` in `lib/navigation/tools.ts` carries a
-   sprite _name_; it would carry an **item id** instead — coins (995) for
-   Economy, a clue scroll for Clues, and so on. Small change plus its test, and
-   it lets `SpriteSheet` and the seven hand-drawn sprites go entirely.
-3. **Wire `ItemIcon` into economy.** `/economy/prices` and `/economy/items/[id]`
-   already have item ids in hand, so it is a display change with no new data and
-   no new fetch.
+2. **~~Re-point the tool groups at real item icons.~~ Done.** `TOOL_GROUPS`
+   carries an **item id** per group, the landing page renders `ItemIcon`, and the
+   sprite system is deleted (ADR-0023).
+
+   **⚠️ The trap this hit, because it will recur.** The two ids the previous
+   handoff suggested — **995 (Coins)** and **2677 (Clue scroll)** — have **no
+   icon**. The generator reads the GE price mapping, which covers **tradeables
+   only**, and neither is GE-tradeable; both would have rendered the empty `?`
+   cell in the most visible place in the app. `tools.test.ts` now asserts every
+   group id has packed artwork, and that guard was mutation-checked — point
+   Economy at 995 and it fails with `[ 'Economy (995)' ]`.
+
+   What landed, chosen for distinct silhouette **and** distinct hue, checked
+   rendered at 36px in both themes: **2357** gold bar (Economy), **4587** dragon
+   scimitar (Combat), **405** casket (Clues), **1275** rune pickaxe (Skilling),
+   **970** papyrus (Quests), **2434** prayer potion (Utility). A hammer was
+   rejected for Utility because at 36px its silhouette is the pickaxe's.
+
+3. **Wire `ItemIcon` into economy — start here.** `/economy/prices` and
+   `/economy/items/[id]` already have item ids in hand, so it is a display change
+   with no new data and no new fetch.
 
 ### Then — the ADR-0020 step that is still open
 
@@ -140,11 +166,13 @@ Committing them would have turned that into publishing a Jagex art mirror.
   consumer of `ItemIcon`.
 - **Deployment.** Blocked on **V13** more than on code. Note the migration is
   applied locally only.
-- **~~Branch protection~~ — blocked, not pending.** The API returns **403,
-  "Upgrade to GitHub Pro or make this repository public"**. On a private repo on
-  the free plan there is no branch protection and no rulesets. Make the repo
-  public, pay for Pro, or accept that CI reports rather than blocks. **Decide
-  which, rather than re-listing it.**
+- **~~Branch protection~~ — blocked, and now with one option fewer.** The API
+  returns **403, "Upgrade to GitHub Pro or make this repository public"**. On a
+  private repo on the free plan there is no branch protection and no rulesets.
+  **"Make it public" is off the table** as of ADR-0022 — the repo now contains
+  4,645 Jagex item icons, and publishing them as a downloadable archive is a
+  materially different act from a site displaying them. So: **pay for Pro, or
+  accept that CI reports rather than blocks.** Decide which.
 
 ---
 
@@ -171,9 +199,21 @@ Unchanged. **Resolved: V1, V3, V9, V9b, V11, V14.** Moot: V11a, V4.
   that 404. Handle per-item failure; do not abort the run.
 - **`next/image` is wrong for pixel art**, not merely unnecessary. It resamples
   and re-encodes, which is exactly what destroys it, and
-  `image-rendering: pixelated` cannot undo a resampled source. `<img>` plus a
-  documented `no-img-element` suppression is deliberate — don't "fix" it. Vercel
-  also bills optimisation per source image.
+  `image-rendering: pixelated` cannot undo a resampled source. Vercel also bills
+  optimisation per source image. There is now no `<img>` at all — the atlas is a
+  background offset — and `next.config.ts` deliberately has **no
+  `images.remotePatterns`**: a remote pattern turns `/_next/image?url=…` into a
+  fetch-and-serve endpoint on our origin that anyone can drive, which is both an
+  open proxy and hotlinking the wiki through us. Don't add one back.
+- **A packed PNG is far smaller than the sum of its parts.** 2.29 MB of loose
+  icons became 0.81 MB in one sheet. If you ever estimate a sprite sheet's size
+  by adding up files, you will be ~3× too pessimistic and may reject the right
+  option — as ADR-0021 nearly did.
+- **The item mapping contains a non-item.** Id **34035** is named `Placeholder`
+  and its icon is a 1×1 fully transparent PNG. It was in the first manifest, so
+  `hasItemIcon()` answered true for something that renders nothing. The packer
+  drops blank artwork now — but the lesson generalises: the mapping is a feed,
+  not a curated list.
 - **`shape-rendering: crispEdges` and `image-rendering: pixelated` are not
   interchangeable.** The first is SVG-only and does nothing to a raster; the
   second does nothing to an SVG. `Sprite` needs one, `ItemIcon` the other.
@@ -183,11 +223,14 @@ Unchanged. **Resolved: V1, V3, V9, V9b, V11, V14.** Moot: V11a, V4.
 - **A generated TS file fails `format:check` until `npm run format` runs.**
   Generated datasets are Prettier-formatted in this repo; the script prints the
   reminder.
-- **`ItemIcon.test.tsx`'s disk guards are `it.runIf` and currently skipping.**
-  That is a deliberate, temporary concession because their subject is
-  gitignored. **Make them unconditional when delivery lands** — a skipped guard
-  that stays skipped is how a suite starts lying. Contrast
-  `postgres-store.live.test.ts`, which fails rather than skips under CI.
+- **~~`ItemIcon.test.tsx`'s disk guards are `it.runIf` and skipping.~~ Done.**
+  They are unconditional now, in `item-icons.atlas.test.ts`, and they read the
+  committed pixels rather than the filesystem. The only skips in the suite are
+  the five Postgres live tests, which run in CI against the service container.
+- **The icon manifest's order is the atlas index.** `ITEM_ICON_IDS[i]` occupies
+  cell `i`. Editing, sorting or filtering that array without `npm run icons:pack`
+  repoints every icon after the edit at the wrong item — and it renders as
+  _artwork_, not as an error, which is why the atlas test scans actual pixels.
 
 **Carried over, still true:**
 
@@ -199,11 +242,15 @@ Unchanged. **Resolved: V1, V3, V9, V9b, V11, V14.** Moot: V11a, V4.
   `git commit -m`; write the message to a file and use `git commit -F`.
 - **`.prettierignore` hides `.claude/worktrees/`**, so a root-run Prettier check
   against a worktree path silently checks _nothing_ and prints success.
-- **Sprites cannot be tinted, ever** — state lives on the container. Glyphs
+- **Item art cannot be tinted, ever** — state lives on the container. Glyphs
   (`Icon`) are `currentColor` and can. Never put one beside the other at the
   same size.
-- **Sprites and item icons both need the inventory slot on dark.** The `#1b1206`
-  outline is ~1.1:1 on a near-black surface.
+- **Item icons need the inventory slot on dark.** The near-black outline is
+  ~1.1:1 on a near-black surface.
+- **The icon set is GE-tradeables only.** No coins, no clue scrolls, no quest
+  capes, no diary rewards, no skill icons — the generator reads the price
+  mapping, and untradeables are simply not in it. Check `hasItemIcon()` before
+  committing to an id, and assert it in a test.
 - **ADRs are point-in-time.** ADR-0008 still names `--osrs-slate-900`; ADR-0020
   still says sprites must be original art, with a forward pointer to ADR-0021
   rather than an edit.

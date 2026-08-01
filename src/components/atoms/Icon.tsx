@@ -4,19 +4,19 @@ import { cn } from '@/lib/utils/cn';
  * ATOM — UI chrome glyphs. The **second tier** of the two-tier icon system
  * ADR-0020 introduced.
  *
- * Where `Sprite` is a fixed-palette illustration, these are single-path
+ * Where `ItemIcon` is Jagex's fixed-palette raster, these are single-path
  * `fill: currentColor` glyphs, so they follow the `content` tokens and invert
  * with the theme like any other text. That is the whole distinction: a glyph can
- * carry state through colour, a sprite cannot.
+ * carry state through colour, item art cannot.
  *
- * Drawn on a 16×16 pixel grid — the same grammar as the 32-grid sprites, at half
- * the resolution — so the two tiers read as one family even though they behave
- * differently. `crispEdges` for the same reason it is on sprites: without it the
- * browser anti-aliases the staircase and the pixel look is gone.
+ * Drawn on a 16×16 pixel grid — the game's grammar at half the resolution of an
+ * item icon's cell — so the two tiers read as one family even though they behave
+ * differently. `crispEdges` is the SVG counterpart of the `image-rendering:
+ * pixelated` on `.item-icon`: without it the browser anti-aliases the staircase
+ * and the pixel look is gone.
  *
- * **Never place a glyph beside a sprite at the same size.** A tinted glyph next
- * to a fixed-palette illustration looks like a rendering bug rather than a
- * choice.
+ * **Never place a glyph beside an item icon at the same size.** A tinted glyph
+ * next to fixed-palette art looks like a rendering bug rather than a choice.
  */
 
 const PATHS = {
