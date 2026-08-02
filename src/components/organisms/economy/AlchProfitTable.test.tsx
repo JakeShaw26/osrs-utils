@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { rankAlchOpportunities, type AlchCandidate } from '@/lib/economy/alch';
+import { hasItemIcon } from '@/lib/ui/item-icons';
 import { AlchProfitTable } from './AlchProfitTable';
 
 const CANDIDATES: AlchCandidate[] = [
@@ -77,6 +78,40 @@ describe('AlchProfitTable', () => {
     render(<AlchProfitTable opportunities={opportunities} emptyMessage="none" />);
 
     expect(screen.getByText('None')).toBeInTheDocument();
+  });
+
+  /**
+   * One icon per row, whether or not the id has artwork — id 1 is not a
+   * tradeable and so is absent from the manifest, which makes this fixture a
+   * free test of both states at once. A row that silently lost its cell would
+   * misalign the icon column against the rest of the table.
+   */
+  it('gives every row an icon cell, including ids with no artwork', () => {
+    expect(hasItemIcon(1)).toBe(false);
+    expect(hasItemIcon(2)).toBe(true);
+
+    const { container } = render(
+      <AlchProfitTable
+        opportunities={rankAlchOpportunities(CANDIDATES, 100)}
+        emptyMessage="none"
+      />,
+    );
+
+    // Two rows, one drawn cell: the missing one still reserves its slot.
+    expect(container.querySelectorAll('.item-icon')).toHaveLength(1);
+    expect(screen.getAllByRole('row')).toHaveLength(3); // header + 2
+  });
+
+  // The link beside each icon prints the same name.
+  it('keeps the artwork decorative', () => {
+    render(
+      <AlchProfitTable
+        opportunities={rankAlchOpportunities(CANDIDATES, 100)}
+        emptyMessage="none"
+      />,
+    );
+
+    expect(screen.queryByRole('img')).not.toBeInTheDocument();
   });
 
   it('names its columns', () => {

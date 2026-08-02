@@ -271,6 +271,12 @@ game art, not tintable, so it can never carry state through colour, and it needs
 behaves like text. (ADR-0020). **The hand-drawn `Sprite` system is deleted**
 (ADR-0023); recover from `77e990f` rather than redrawing if it is ever wanted.
 
+**`ItemIcon` is wired into economy** — `ItemPriceTable`, `AlchProfitTable` and
+`ItemOverview`, all `slotted`, all decorative (the link or heading beside each
+one prints the name). Five of the 4,650 mapping ids have no packed artwork
+because the icon file the mapping names 404s; `/economy/items/28220` is the
+reachable example and renders the empty slot.
+
 **`ItemIcon` takes an item id, not a name.** Real OSRS icons are rasters trimmed
 to their content, so there is no grid to scale against — the _cell_ is fixed
 (36px, `scale={1|2}`) and the artwork sits inside it. It renders an empty cell
@@ -291,14 +297,12 @@ live APIs; `ranks.test.ts` uses the real Void Reavers `roleOrders` fixture.
 
 Full detail in [`HANDOFF.md`](./HANDOFF.md).
 
-1. **Wire `ItemIcon` into `/economy/prices` and `/economy/items/[id]`** — they
-   already hold item ids, so it is display only, no new fetch.
-2. **Page-level layout and navigation** — the last ADR-0020 step. There is no
+1. **Page-level layout and navigation** — the last ADR-0020 step. There is no
    global nav at all today; every page is reached from the landing page or a URL.
-3. **Marble texture**, which needs the layout first. Never behind data.
-4. **Roster page** over `sortByRank`/`groupByRank`, surfacing
+2. **Marble texture**, which needs the layout first. Never behind data.
+3. **Roster page** over `sortByRank`/`groupByRank`, surfacing
    `player.updatedAt` so staleness is visible rather than implied.
-5. **`pruneRateLimitCounters()` job** behind `CRON_SECRET`.
+4. **`pruneRateLimitCounters()` job** behind `CRON_SECRET`.
 
 ## CI
 
