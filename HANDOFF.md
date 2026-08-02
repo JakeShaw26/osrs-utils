@@ -21,10 +21,21 @@ built the day before did what it was supposed to do, which is the point.
 > `TOOL_GROUPS` is already the nav's data model. Full detail in
 > [Next steps](#next-steps).
 >
-> ⚠️ **The branch problem got worse, as predicted.** `docs/handoff-2026-07-31`
-> now carries **six** commits and its name describes only the first. It is still
-> unmerged. Rename it or open the PR before starting layout work — a
-> layout/navigation change is large, and it should not land on this branch.
+> **The branch is sorted and the work is in review.** The misnamed
+> `docs/handoff-2026-07-31` was renamed to **`feat/item-icons`** and opened as
+> **[PR #25](https://github.com/JakeShaw26/osrs-utils/pull/25)** — six commits,
+> 47 files, three ADRs. **All four CI jobs pass**, including the `ci` gate.
+>
+> ⚠️ **Two things still outstanding on it.** The PR is **not merged** — start
+> layout work on a fresh branch off `main` if it is still open, because a
+> layout/navigation change should not stack on this one. And the old remote
+> branch `origin/docs/handoff-2026-07-31` still exists, pointing at the same
+> commits; deleting it was blocked by a permission rule, so it needs doing by
+> hand (`git push origin --delete docs/handoff-2026-07-31`).
+>
+> **Green CI is not a gate here.** With branch protection unavailable, nothing
+> stops a merge with red checks — waiting for green is a habit, not a guarantee.
+> See the branch-protection item in [Next steps](#next-steps).
 
 ---
 
@@ -141,12 +152,15 @@ Needs the layout first. Never behind data.
 - **Deployment.** Blocked on **V13** more than on code. The migration is applied
   locally only, so `enforceRateLimit()` fails open anywhere else — safe, but not
   rate limiting.
-- **~~Branch protection~~ — still blocked, still one option short.** The API
-  returns **403, "Upgrade to GitHub Pro or make this repository public"**.
-  "Make it public" is off the table as of ADR-0022 (4,645 Jagex icons are in git
-  history). So: **pay for Pro, or accept that CI reports rather than blocks.**
-  Undecided since 2026-07-31; it is a two-minute decision that keeps being
-  deferred.
+- **~~Branch protection~~ — still blocked, still one option short, and now with
+  a live example.** The API returns **403, "Upgrade to GitHub Pro or make this
+  repository public"**. "Make it public" is off the table as of ADR-0022 (4,645
+  Jagex icons are in git history). So: **pay for Pro, or accept that CI reports
+  rather than blocks.** Undecided since 2026-07-31.
+
+  PR #25 is what that costs in practice: four green jobs, and nothing at all
+  preventing a merge had they been red. The decision is two minutes of thought
+  and keeps being deferred because the failure it prevents has not happened yet.
 
 ---
 
