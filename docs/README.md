@@ -47,6 +47,7 @@ valuable part.
 | [0021](./adr/0021-osrs-item-icons-by-id.md)                       | OSRS item icons by id (delivery → 0022)            | Accepted               |
 | [0022](./adr/0022-item-icon-delivery-packed-atlas.md)             | Icons delivered as ten committed atlas sheets      | Accepted               |
 | [0023](./adr/0023-retire-the-hand-drawn-sprite-system.md)         | Hand-drawn `Sprite` system deleted                 | Accepted               |
+| [0024](./adr/0024-ci-reports-rather-than-blocks.md)               | CI reports rather than blocks; `main` unprotected  | Accepted               |
 
 **To add one:** copy [`0000-template.md`](./adr/0000-template.md), take the next
 number, and **add a row above in the same commit**. The `write-adr` skill
