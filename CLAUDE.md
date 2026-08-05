@@ -3,20 +3,22 @@
 Loaded into every AI session. **Keep under ~200 lines** or it stops being read.
 Updating this is part of the definition of done for any architectural change.
 
-**Last updated:** 2026-08-01
+**Last updated:** 2026-08-05
 **Current phase:** **Phase B complete; the ADR-0020 redesign is 3 of 4 steps in.**
-All six feature slices are on `origin/main` — **27 routes, 1133 tests**, CI
-green. The palette is re-pointed to Nero Marquina in both themes, the labelled
-fields are de-duplicated, and `ItemIcon` brings real OSRS item art in by item id
-(ADR-0021), delivered as ten committed atlas sheets (ADR-0022). **Page-level
-layout and navigation is still the remaining ADR-0020 step.** The rate-limit
-migration is applied to local Postgres and `enforceRateLimit()` is verified
-end-to-end (20 requests pass, the 21st gets a 429).
+All six feature slices **and the whole icon system** are on `origin/main` —
+**27 routes, 1141 tests**, CI green. The palette is re-pointed to Nero Marquina
+in both themes, the labelled fields are de-duplicated, and `ItemIcon` brings
+real OSRS item art in by item id (ADR-0021), delivered as ten committed atlas
+sheets (ADR-0022) and rendering in the three economy organisms. **Page-level
+layout and navigation is the one remaining ADR-0020 step**, and there is no
+open PR — start it on a fresh branch off `main`. The rate-limit migration is
+applied to local Postgres and `enforceRateLimit()` is verified end-to-end (20
+requests pass, the 21st gets a 429).
 
 **Icon delivery is no longer blocking.** The atlas is committed, so a fresh
 checkout has icons and `ItemIcon` is safe to use in a route. **One consequence
-to know:** Jagex artwork is now in git, so "make the repo public" to unlock
-branch protection is effectively foreclosed — see ADR-0022.
+to know:** Jagex artwork is now in git, so making the repo public is foreclosed
+(ADR-0022) — which is why `main` can never have branch protection (ADR-0024).
 
 ---
 
@@ -119,6 +121,7 @@ Full requirements: [`PRD.md`](./PRD.md). Decisions: [`docs/adr/`](./docs/adr/).
 | Item artwork     | Real OSRS icons by item id, same-origin                            | [0021](./docs/adr/0021-osrs-item-icons-by-id.md)                       |
 | Icon delivery    | Ten committed atlas sheets; index in the manifest = cell           | [0022](./docs/adr/0022-item-icon-delivery-packed-atlas.md)             |
 | Feature sprites  | **Deleted.** `ItemIcon` is all of tier one now                     | [0023](./docs/adr/0023-retire-the-hand-drawn-sprite-system.md)         |
+| CI enforcement   | **None possible.** `ci` is advisory; check it by hand before merge | [0024](./docs/adr/0024-ci-reports-rather-than-blocks.md)               |
 
 ### Consequences of "no auth" that are easy to forget
 
@@ -290,7 +293,7 @@ at the wiki. (ADR-0021, ADR-0022)
 that renders as artwork, not as an error. `item-icons.atlas.test.ts` reads the
 committed pixels to catch it. (ADR-0022)
 
-1133 tests. The escaping and IP-spoofing tests encode behaviour verified against
+1141 tests. The escaping and IP-spoofing tests encode behaviour verified against
 live APIs; `ranks.test.ts` uses the real Void Reavers `roleOrders` fixture.
 
 ## Next tasks
@@ -307,8 +310,14 @@ Full detail in [`HANDOFF.md`](./HANDOFF.md).
 ## CI
 
 Four jobs: `quality` / `test` / `build` run in parallel, and a `ci` gate
-job requires all three — **branch protection should require `ci` alone**, so a
-job added later is covered the moment it joins `needs`.
+job requires all three, so a job added later is covered the moment it joins
+`needs`.
+
+⚠️ **`ci` is advisory, not enforced. `main` has no branch protection and cannot
+have any** — protection _and_ rulesets both 403 on a private free repo, and
+going public is foreclosed by ADR-0022. **Check `gh pr checks <n>` is green
+before `gh pr merge`; nothing else will.** `main` can also be force-pushed.
+Settled 2026-08-05, revisit on deployment — [ADR-0024](./docs/adr/0024-ci-reports-rather-than-blocks.md).
 
 - **Actions are pinned to commit SHAs**, never tags. `@v4` is mutable, and CI is
   where `CRON_SECRET` and `DATABASE_URL` will live. Keep the trailing `# v4.4.0`

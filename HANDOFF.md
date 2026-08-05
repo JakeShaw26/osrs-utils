@@ -21,21 +21,18 @@ built the day before did what it was supposed to do, which is the point.
 > `TOOL_GROUPS` is already the nav's data model. Full detail in
 > [Next steps](#next-steps).
 >
-> **The branch is sorted and the work is in review.** The misnamed
-> `docs/handoff-2026-07-31` was renamed to **`feat/item-icons`** and opened as
-> **[PR #25](https://github.com/JakeShaw26/osrs-utils/pull/25)** — six commits,
-> 47 files, three ADRs. **All four CI jobs pass**, including the `ci` gate.
+> **✅ Merged and tidied, 2026-08-05.**
+> **[PR #25](https://github.com/JakeShaw26/osrs-utils/pull/25) is squash-merged**
+> into `main` as **`935073c`**, with all four checks green at merge. Both stale
+> branches are gone — `feat/item-icons` (deleted with the merge) and
+> `origin/docs/handoff-2026-07-31` (deleted by hand). **There is no open PR;
+> branch off `main`.**
 >
-> ⚠️ **Two things still outstanding on it.** The PR is **not merged** — start
-> layout work on a fresh branch off `main` if it is still open, because a
-> layout/navigation change should not stack on this one. And the old remote
-> branch `origin/docs/handoff-2026-07-31` still exists, pointing at the same
-> commits; deleting it was blocked by a permission rule, so it needs doing by
-> hand (`git push origin --delete docs/handoff-2026-07-31`).
->
-> **Green CI is not a gate here.** With branch protection unavailable, nothing
-> stops a merge with red checks — waiting for green is a habit, not a guarantee.
-> See the branch-protection item in [Next steps](#next-steps).
+> **✅ Branch protection is settled: there will be none
+> ([ADR-0024](./docs/adr/0024-ci-reports-rather-than-blocks.md)).** Open since
+> 2026-07-31, decided by the owner on 2026-08-05: we do not pay for Pro, and
+> ADR-0022 forecloses going public. **So `ci` is advisory forever — run
+> `gh pr checks <n>` before `gh pr merge`, because nothing else will.**
 
 ---
 
@@ -152,15 +149,14 @@ Needs the layout first. Never behind data.
 - **Deployment.** Blocked on **V13** more than on code. The migration is applied
   locally only, so `enforceRateLimit()` fails open anywhere else — safe, but not
   rate limiting.
-- **~~Branch protection~~ — still blocked, still one option short, and now with
-  a live example.** The API returns **403, "Upgrade to GitHub Pro or make this
-  repository public"**. "Make it public" is off the table as of ADR-0022 (4,645
-  Jagex icons are in git history). So: **pay for Pro, or accept that CI reports
-  rather than blocks.** Undecided since 2026-07-31.
+- **~~Branch protection~~ — closed 2026-08-05, ADR-0024.** We accept CI as
+  reporting-only. Re-measured before deciding: **both** `branches/main/protection`
+  **and `rulesets` return 403** on a private free repo, so rulesets were not the
+  free fallback they looked like. Pro is the only paid route, and ADR-0022
+  forecloses the public one.
 
-  PR #25 is what that costs in practice: four green jobs, and nothing at all
-  preventing a merge had they been red. The decision is two minutes of thought
-  and keeps being deferred because the failure it prevents has not happened yet.
+  **Reopen it when the app is deployed** — every argument for accepting this
+  rests on `main` reaching no users, and that expires with V13.
 
 ---
 
