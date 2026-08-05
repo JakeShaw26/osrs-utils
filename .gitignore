@@ -35,3 +35,13 @@ yarn-error.log*
 # feature agents. Their branches live on the remote; the directories are
 # disposable and must never be committed.
 .claude/worktrees/
+
+# OSRS item icons — the raw per-item download cache, 4,646 files written by
+# `node scripts/generate-item-icons.mjs`. Excluded on the owner's call: 4k
+# binaries is too much repo churn.
+#
+# What IS committed is `public/item-icons/atlas-*.png` — ten packed sheets built
+# from this cache by `scripts/pack-item-icons.mjs` (ADR-0022). Those are the
+# delivery mechanism; this directory is only the incremental fetch cache, so
+# deleting it costs a ~10-minute re-download and nothing else.
+/.icon-cache/

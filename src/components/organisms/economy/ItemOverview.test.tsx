@@ -4,6 +4,13 @@ import type { MarketRow } from '@/lib/economy/market';
 import { ItemOverview } from './ItemOverview';
 
 /**
+ * `Crystal 2h axe` — in the price mapping, so this route serves it, but the
+ * icon file the mapping names 404s, so it is one of the five ids with no packed
+ * artwork. A reachable URL rather than a synthetic id.
+ */
+const NO_ARTWORK = 28_220;
+
+/**
  * Reads one stat tile by its label. Several tiles can legitimately show the
  * same text — "capped at 5m" appears on both the margin and the tax tile — so
  * pairing the `<dt>` with its `<dd>` asserts the right tile carries the value.
@@ -116,6 +123,34 @@ describe('ItemOverview', () => {
     render(<ItemOverview row={row({ fiveMinute: null })} natureRunePrice={100} />);
 
     expect(screen.getByText('No volume data')).toBeInTheDocument();
+  });
+
+  it("shows the item's artwork at double scale in the header", () => {
+    const { container } = render(<ItemOverview row={row()} natureRunePrice={100} />);
+
+    expect(container.querySelector('.item-icon')).toHaveStyle({
+      transform: 'scale(2)',
+    });
+  });
+
+  // The heading beside it is the item name.
+  it('keeps the artwork decorative', () => {
+    render(<ItemOverview row={row()} natureRunePrice={100} />);
+
+    expect(screen.queryByRole('img')).not.toBeInTheDocument();
+  });
+
+  /** Five mapping ids have no packed artwork. The header must still be a header. */
+  it('renders the header for an item with no artwork', () => {
+    const { container } = render(
+      <ItemOverview
+        row={row({ id: NO_ARTWORK, name: 'Crystal 2h axe' })}
+        natureRunePrice={100}
+      />,
+    );
+
+    expect(screen.getByRole('heading', { name: 'Crystal 2h axe' })).toBeInTheDocument();
+    expect(container.querySelector('.item-icon')).toBeNull();
   });
 
   it('notes that a large sale is capped rather than taxed at 2%', () => {

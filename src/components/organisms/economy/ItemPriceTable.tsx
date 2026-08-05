@@ -8,6 +8,7 @@ import {
   TableHeaderCell,
   TableRow,
 } from '@/components/atoms/Table';
+import { ItemIcon } from '@/components/atoms/ItemIcon';
 import { LiquidityWarning } from '@/components/molecules/economy/LiquidityWarning';
 import { assessLiquidity, calculateFlip } from '@/lib/economy/flipping';
 import type { MarketRow } from '@/lib/economy/market';
@@ -23,6 +24,11 @@ import { formatGp } from '@/lib/utils/format-gp';
  * liquidity badge. Both are deliberate — a table of gross margins sorted
  * descending is a list of traps, because the biggest gross margins cluster on
  * the items nobody trades. (PRD §3.1)
+ *
+ * The icons are `slotted`: rows sit directly on the page surface, which is
+ * near-black in dark mode, and an item icon's near-black outline is ~1.1:1
+ * against it. There is no `dark:` escape hatch by ADR-0008, so the slot is the
+ * only way to make the artwork read in both themes — see `ItemIcon`.
  */
 
 interface ItemPriceTableProps {
@@ -65,12 +71,17 @@ export function ItemPriceTable({ rows, emptyMessage }: ItemPriceTableProps) {
             return (
               <TableRow key={row.id}>
                 <TableCell>
-                  <Link
-                    href={`/economy/items/${row.id}`}
-                    className="font-medium text-content hover:text-primary hover:underline"
-                  >
-                    {row.name}
-                  </Link>
+                  <span className="flex items-center gap-2.5">
+                    {/* No `name`: the link beside it already prints it, and a
+                        named icon would announce "Abyssal whip Abyssal whip". */}
+                    <ItemIcon id={row.id} slotted />
+                    <Link
+                      href={`/economy/items/${row.id}`}
+                      className="font-medium text-content hover:text-primary hover:underline"
+                    >
+                      {row.name}
+                    </Link>
+                  </span>
                 </TableCell>
                 <TableCell numeric>
                   {row.buyPrice === null ? '—' : formatGp(row.buyPrice)}

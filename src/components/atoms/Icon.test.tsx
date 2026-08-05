@@ -19,8 +19,8 @@ describe('Icon', () => {
   /**
    * The whole distinction between the two icon tiers: a glyph follows
    * `currentColor`, so it can carry state through colour and inverts with the
-   * theme. A sprite cannot. If this ever stops being true, glyphs and sprites
-   * become interchangeable and the system quietly collapses into one tier.
+   * theme. Item art cannot. If this ever stops being true, the two tiers become
+   * interchangeable and the system quietly collapses into one.
    */
   it('inherits the surrounding text colour', () => {
     const { container } = render(<Icon name="check" />);
@@ -35,7 +35,7 @@ describe('Icon', () => {
     }
   });
 
-  it('renders on the 16-grid so it sits with the sprites', () => {
+  it('renders on the 16-grid so it sits with the item art', () => {
     const { container } = render(<Icon name="filter" size={20} />);
     const svg = container.querySelector('svg');
 

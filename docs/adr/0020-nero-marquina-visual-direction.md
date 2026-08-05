@@ -3,6 +3,10 @@
 - **Status:** **Accepted — chosen by the repository owner (2026-07-31)**
 - **Date:** 2026-07-31
 - **Deciders:** Repository owner, from four directions explored by an AI agent
+- **Partially revised by:** [ADR-0021](./0021-osrs-item-icons-by-id.md) — the
+  first Neutral consequence below ("sprites must be original art") no longer
+  holds for **item** artwork. The reasoning here is left as written; ADR-0021
+  records why it changed.
 
 ## Context
 

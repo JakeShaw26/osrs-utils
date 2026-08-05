@@ -19,8 +19,6 @@
  * a group lands.
  */
 
-import type { SpriteName } from '@/lib/ui/sprites';
-
 export interface Tool {
   title: string;
   description: string;
@@ -33,11 +31,16 @@ export interface ToolGroup {
   /** The group's index route. */
   href: string;
   /**
-   * The feature sprite that stands for this group (ADR-0020). Required, so a
-   * group added later cannot quietly render without one — `tools.test.ts`
-   * checks every name resolves to real artwork in the sheet.
+   * The OSRS item whose icon stands for this group (ADR-0021, ADR-0022).
+   *
+   * Required, so a group added later cannot quietly render without one, and
+   * `tools.test.ts` asserts every id has packed artwork. **That check is not
+   * ceremony:** the icon set comes from the GE price mapping, which covers
+   * **tradeables only** — the two ids this group list originally reached for,
+   * `995` (Coins) and `2677` (Clue scroll), have no icon at all and would have
+   * rendered an empty cell on the landing page.
    */
-  sprite: SpriteName;
+  itemId: number;
   tools: readonly Tool[];
 }
 
@@ -45,7 +48,9 @@ export const TOOL_GROUPS: readonly ToolGroup[] = [
   {
     heading: 'Economy',
     href: '/economy',
-    sprite: 'coins',
+    // Gold bar, not coins: 995 is untradeable and so has no icon. Closest
+    // readable stand-in for "wealth" in the tradeable set.
+    itemId: 2357,
     tools: [
       {
         title: 'GE Prices',
@@ -67,7 +72,9 @@ export const TOOL_GROUPS: readonly ToolGroup[] = [
   {
     heading: 'Combat',
     href: '/combat',
-    sprite: 'scimitar',
+    // Dragon scimitar — the red blade is the most legible weapon silhouette in
+    // the set at 36px.
+    itemId: 4587,
     tools: [
       {
         title: 'DPS Calculator',
@@ -89,7 +96,10 @@ export const TOOL_GROUPS: readonly ToolGroup[] = [
   {
     heading: 'Clues',
     href: '/clues',
-    sprite: 'clue',
+    // Casket, not a clue scroll: no clue scroll is tradeable, so none has an
+    // icon. The reward casket is the next-best clue signifier and reads as a
+    // treasure chest at a glance.
+    itemId: 405,
     tools: [
       {
         title: 'Clue Solver',
@@ -111,7 +121,10 @@ export const TOOL_GROUPS: readonly ToolGroup[] = [
   {
     heading: 'Skilling',
     href: '/skilling',
-    sprite: 'anvil',
+    // Rune pickaxe. A hammer was the other candidate and was rejected on
+    // silhouette: at 36px it is the same shape as this, and two groups that
+    // look alike defeat the point of the icon.
+    itemId: 1275,
     tools: [
       {
         title: 'XP Calculator',
@@ -138,7 +151,10 @@ export const TOOL_GROUPS: readonly ToolGroup[] = [
   {
     heading: 'Quests',
     href: '/quests',
-    sprite: 'star',
+    // Papyrus. Nothing quest-flavoured is tradeable — no quest cape, no antique
+    // lamp, no diary reward — so this stands for the written list of things to
+    // do, which covers the diaries in this group too.
+    itemId: 970,
     tools: [
       {
         title: 'Quest Planner',
@@ -155,7 +171,10 @@ export const TOOL_GROUPS: readonly ToolGroup[] = [
   {
     heading: 'Utility',
     href: '/utility',
-    sprite: 'hourglass',
+    // Prayer potion. The hourglass this replaces has no tradeable equivalent,
+    // and the teal is the only cool colour among the six — which is what stops
+    // a row of gold-and-brown icons blurring together.
+    itemId: 2434,
     tools: [
       {
         title: 'Reset Timers',

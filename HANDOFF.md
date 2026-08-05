@@ -1,281 +1,166 @@
-# Handoff — 2026-07-28
+# Handoff — 2026-08-02
 
 Snapshot for picking this up cold. **Living context is [`CLAUDE.md`](./CLAUDE.md)** —
 read that first; this file covers what just happened and what to do next.
 
-This replaces the 2026-07-27 evening handoff, which ended at "nothing compares
-the six slices visually". That is now closed — see below.
+This replaces the 2026-08-01 handoff, whose first instruction was "wire
+`ItemIcon` into economy". That is done, and it was a small session — the atlas
+built the day before did what it was supposed to do, which is the point.
 
-> ## ✅ Resume point: the direction is chosen — the redesign is buildable
+> ## ✅ Resume point: item art is in a real data-bearing route. Start on layout.
 >
-> A **design-system project now exists** on claude.ai/design with the current UI
-> inventoried and four redesign directions explored. **Zero repo changes were
-> made** — the code on `main` is untouched by any of it.
+> **`ItemIcon` renders in all three economy organisms** — `ItemPriceTable`,
+> `AlchProfitTable`, `ItemOverview`. Display only: every call site already held
+> `item.id`, so no new data, no new fetch, no upstream cost. 1,141 passing,
+> lint/typecheck/format/build clean.
 >
-> **Decided 2026-07-31 by the repository owner: direction B · Nero Marquina,
-> with light mode first-class** (not a fallback). Recorded in
-> [ADR-0020](./docs/adr/0020-nero-marquina-visual-direction.md); the reasoning
-> and the rejected directions are below and in the ADR's alternatives table.
+> **Next: page-level layout and navigation.** It is now the only remaining
+> ADR-0020 step and has been deferred across four handoffs. There is no global
+> nav at all — every page is reached from the landing page or by URL.
+> `app/layout.tsx` is nearly bare, so there is a clean place for a header, and
+> `TOOL_GROUPS` is already the nav's data model. Full detail in
+> [Next steps](#next-steps).
 >
-> Nothing is blocked. The build sequence is in [Next steps](#next-steps) —
-> start with the Layer 1 re-point, which is the cheapest point to reject.
+> **The branch is sorted and the work is in review.** The misnamed
+> `docs/handoff-2026-07-31` was renamed to **`feat/item-icons`** and opened as
+> **[PR #25](https://github.com/JakeShaw26/osrs-utils/pull/25)** — six commits,
+> 47 files, three ADRs. **All four CI jobs pass**, including the `ci` gate.
 >
-> Phase B's own menu is unchanged and unblocked, and one of its items —
-> **de-duplicating the numeric field** — is now worth doing _before_ the re-skin.
+> ⚠️ **Two things still outstanding on it.** The PR is **not merged** — start
+> layout work on a fresh branch off `main` if it is still open, because a
+> layout/navigation change should not stack on this one. And the old remote
+> branch `origin/docs/handoff-2026-07-31` still exists, pointing at the same
+> commits; deleting it was blocked by a permission rule, so it needs doing by
+> hand (`git push origin --delete docs/handoff-2026-07-31`).
 >
-> Start Postgres before doing anything database-shaped: `npm run db:up`.
+> **Green CI is not a gate here.** With branch protection unavailable, nothing
+> stops a merge with red checks — waiting for green is a habit, not a guarantee.
+> See the branch-protection item in [Next steps](#next-steps).
 
 ---
 
 ## Executive summary
 
-**A redesign workstream opened, explored four directions, and B was chosen.**
-The exploration session did three things:
+One task, closed. Item icons now appear beside item names in the price table,
+the alch table and the item detail header, which is what the atlas was built
+for. The change is display-only — the organisms were already receiving item ids
+they simply were not drawing.
 
-1. **Inventoried the current UI** into a design-system project — 48 components
-   and the full token system, rendered light and dark side by side from real
-   markup and real token values, not sketches.
-2. **Explored four complete redesign directions** — marble-based palettes mixed
-   with OSRS theming, each a full token set in both themes, each applied to the
-   same page fragment so they are compared like for like rather than admired
-   in isolation.
-3. **Built an OSRS-grammar pixel icon set** to replace the generic line icons
-   the first pass produced.
+| Changed                                 | What                                                              |
+| --------------------------------------- | ----------------------------------------------------------------- |
+| `organisms/economy/ItemPriceTable.tsx`  | Icon beside the name link in each row, `slotted`, decorative      |
+| `organisms/economy/AlchProfitTable.tsx` | Same                                                              |
+| `organisms/economy/ItemOverview.tsx`    | `scale={2}` in the detail header, icon left of name and examine   |
+| Their three test files                  | +8 tests: the offset tracks the row's id, decorative, gap ids     |
+| `CLAUDE.md`                             | Dropped the completed task; recorded where `ItemIcon` now renders |
 
-**No code was written.** The exploration lives in the design project and can be
-thrown away at no cost if the direction turns out wrong. That was deliberate: a
-redesign that touches tokens touches all 27 routes, and it is much cheaper to
-reject a palette in a preview than in a diff. The only repository changes are
-this file and [ADR-0020](./docs/adr/0020-nero-marquina-visual-direction.md).
+No ADR. Nothing architectural was decided — ADR-0021 and ADR-0022 already
+settled how item art works, and this session only used it.
 
 ---
 
-## The design-system project
+## The two decisions inside it
 
-**Project:** `OSRS Clan Toolkit — Design System`
-**ID:** `83afccbd-460f-4655-863e-264658472345`
-**14 files** — 10 inventory cards, 4 exploration cards.
+Both are small, both are the kind of thing that reads as arbitrary later.
 
-There were **no design-system projects at all** before this session; this one
-was created for it. Note that the `/design-sync` skill is **not installed** in
-this environment — the `DesignSync` tool was driven directly. If you install the
-skill later it will expect a locally-generated bundle; this project was
-hand-authored, which is why its cards are explicitly registered _and_ carry
-`@dsCard` markers.
+- **`slotted` in tables, not just on the landing page.** The rows sit directly
+  on the page surface, which is near-black in dark mode, and an item icon's
+  near-black outline is ~1.1:1 against it. ADR-0008 rules out a `dark:` variant
+  in a component, so the choice is the slot in **both** themes or in neither.
+  It reads as a subtle parchment well in light and as OSRS's own brown
+  inventory slot in dark — checked in both, not reasoned about in one.
+- **No `name` on any of them.** The link or heading beside each icon already
+  prints the item name, so a named icon announces "Abyssal whip Abyssal whip".
+  This is the case `ItemIcon`'s "is decorative when it has no name" test pins,
+  and it is now exercised by a real caller rather than only by the atom's own
+  test.
 
-### Inventory — what the app looks like today
-
-| Card                          | Contents                                                        |
-| ----------------------------- | --------------------------------------------------------------- |
-| `foundations/colors`          | Every semantic group, both themes, with the two-layer rationale |
-| `foundations/typography`      | The scale, plus the same table with and without `.tabular`      |
-| `foundations/shape-elevation` | Radii, shadows, spacing rhythm, focus ring                      |
-| `components/button`           | 3 variants × default / hover / focus / disabled                 |
-| `components/form-controls`    | Input + Select, carrying the ⚠️ 3× duplicate-field warning      |
-| `components/stat-badge`       | All 6 tones                                                     |
-| `components/price`            | PriceTag formatting ladder + PriceChangeIndicator               |
-| `components/table`            | Data, hover row, empty state                                    |
-| `components/feature-card`     | Grid + states, including the `aria-disabled` coming-soon case   |
-| `templates/calculator-layout` | Full shell + all 3 content widths                               |
-
-The `.tabular` card is the one worth looking at first. It puts the same GP
-column side by side with and without `font-variant-numeric: tabular-nums`, and
-the jitter is much more obvious than the convention's one-line description in
-`CLAUDE.md` makes it sound.
-
-### Explorations — the four directions
-
-| Card                          | Contents                                                            |
-| ----------------------------- | ------------------------------------------------------------------- |
-| `explorations/palettes`       | Four complete token sets, light + dark                              |
-| `explorations/applied`        | The same page fragment in all 4 × both themes — the comparison card |
-| `explorations/icons`          | OSRS pixel sprites + tintable UI glyphs                             |
-| `explorations/marble-texture` | The `feTurbulence` vein filter, plus an ALLOWED / BANNED pair       |
-
-**`applied` is the card to judge from.** The palette card shows swatches, which
-always flatter; `applied` shows a banner, two icon-led cards, a price table and
-an action row in each direction, which is where a palette actually fails.
+The three organisms are still Server Components, and no `"use client"` file
+imports them — so the ~28 KB icon manifest stays out of the browser bundle.
+That was checked rather than assumed, and it is worth re-checking if one of
+these tables ever grows a sort control.
 
 ---
 
-## The four directions
+## What the measurement found
 
-All four keep the two-layer token structure and all existing semantic names, so
-the change is a re-point of Layer 1, not a re-architecture. All four share the
-same brand gold.
+**The tradeables-only trap is narrower than the last handoff implied, and its
+real shape is more useful.** The previous handoff warned that
+`/economy/items/[id]` "takes an id from the URL and will meet ids with no
+artwork". That is true only in a way that matters less than it sounds:
 
-|       | Direction                  | Ground                               | Character                                                         | Risk                                                    |
-| ----- | -------------------------- | ------------------------------------ | ----------------------------------------------------------------- | ------------------------------------------------------- |
-| **A** | **Carrara & Gold**         | Warm off-white `#f4f2ee` / `#171613` | Closest to classic marble. Warm, soft, quite gentle               | Warm greys make the amber `warning` token muddy         |
-| **B** | **Nero Marquina**          | Cool neutral `#eeeff0` / `#0b0b0c`   | Black marble with white veining. High contrast, gold pops hardest | The most conservative — least "OSRS" of the four        |
-| **C** | **Verde Antico**           | Green-grey `#eef1ec` / `#0d120f`     | The most distinctive. Reads as stone _and_ as RuneScape           | ⚠️ Green ground weakens the green `profit` signal       |
-| **D** | **Travertine & Parchment** | Warm sand `#f2ece0` / `#14100a`      | Most OSRS-native — quest-scroll parchment                         | Lowest contrast headroom; the warm ground eats `border` |
+- **The route only serves ids in the price mapping.** `/economy/items/995`
+  (Coins) returns **404**, not an empty icon — the route cannot reach an
+  untradeable at all. The first version of the new test used 995 and passed
+  while describing a state the app has no route to.
+- **The real gap is exactly five ids**, checked against the live mapping and the
+  committed manifest: `Crystal 2h axe` (28220), `Crystal 2h axe (inactive)`
+  (28223), `Trinket of vengeance (1)` (33431), `Trinket of vengeance (2)`
+  (33428), and `Placeholder` (34035, the packer drops it). The first four are
+  the documented "mapping names an icon file that 404s" case.
+- **`/economy/items/28220` is the reachable one**, and it was looked at: the
+  empty slot with its `?` reads as deliberate rather than as a failed load.
 
-**Chosen: B · Nero Marquina** (owner, 2026-07-31 — [ADR-0020](./docs/adr/0020-nero-marquina-visual-direction.md)).
-Not because it is the prettiest — C is —
-but because this app is fundamentally **dense numeric tables**, and B is the only
-direction whose ground is chromatically neutral. Every other direction tints the
-surface, and a tinted surface competes with the `profit` / `loss` / `success` /
-`danger` tokens that carry the app's actual meaning. B spends its whole colour
-budget on the data and the gold, which is where a tool's colour should go.
-
-C's problem is concrete and worth stating plainly: on a green surface, a green
-"profit" figure is a smaller perceptual step than a red "loss" figure, so gains
-read quieter than losses. That is a semantic bug dressed as a palette choice. It
-is fixable — push `profit` to a brighter emerald, which the card does — but it
-is fixing something the other three never break.
-
-### The gold fix, which applies to whichever direction wins
-
-Today's light-mode `--primary` is `#b47c17`, and it reads brown rather than gold.
-The cause is not taste: it has to be that dark to carry **white** `primary-content`
-at 4.5:1. Dark mode already dodges this — it pairs a bright gold with near-black
-text and gets a much better gold for free.
-
-All four directions apply the same fix in light mode: **true gold `#c9a227` with
-near-black `primary-content`**, which clears 7:1 rather than scraping 4.5:1. The
-button gets brighter _and_ more accessible at once. This is the single change
-with the best ratio of visual payoff to risk in the whole exploration, and it is
-independent of which direction wins.
-
----
-
-## Icons — OSRS pixel sprites
-
-The first pass produced generic thin-stroke line icons. That was wrong for this
-app and has been replaced.
-
-**⚠️ What we cannot do, and why.** OSRS item and interface sprites are Jagex
-copyright. The Wiki hosts them under fair dealing, **not** a redistribution
-licence. So we can neither vendor the PNGs — that is **hard rule #9 / ADR-0007**,
-"never copy third-party source into this repo" — nor hotlink the Wiki's CDN,
-which breaches [`docs/api-terms.md`](./docs/api-terms.md) on self-limiting and
-honest identification. If literal sprites are ever wanted, that is a licensing
-conversation with Jagex, not a build step.
-
-**What was built instead:** original art drawn to OSRS's _icon grammar_ — the
-32×32 item-sprite grid, a 1px `#1b1206` outline, flat fills with one highlight
-and one shade, light from the top-left, no anti-aliasing, ≤6 colours per sprite.
-Seven feature sprites (coins, scimitar, anvil, clue scroll, quest point star,
-shield, hourglass) and twelve UI glyphs. Same visual language; ours to ship.
-
-### Three findings that change the design system, not just the art
-
-- **This is a two-tier icon system, and the tiers cannot mix.** Feature sprites
-  are **illustrations**: multi-colour, fixed palette, byte-identical in light and
-  dark, and therefore **not tintable**. They can never carry state (disabled,
-  active, danger) through colour — state has to live on the container. UI chrome
-  stays **glyphs**: single-path `fill: currentColor`, still following the
-  `content` tokens. Put a tinted glyph beside a fixed-palette sprite at the same
-  size and it looks like a rendering bug.
-- **Dark mode breaks the sprites, and the fix is authentic.** The 1px outline is
-  `#1b1206`; on a `#171613` surface that is roughly 1.1:1, so the silhouette
-  dissolves and the sprite frays into loose colour. OSRS never hits this because
-  its own UI sits on lit brown stone, never near-black. The fix is to float the
-  sprite in an **inventory slot** — a lighter inset tile — which is both the
-  contrast fix and the game's own device, so it reads as intent rather than as a
-  patch. The exploration card demonstrates the failure and the fix side by side.
-- **Integer scale only.** A 32-grid sprite is crisp at 16 / 32 / 48 / 64. At 20,
-  24 or 26 the grid lands on fractional device pixels and the staircase goes soft.
-  **24 is the one that will get reached for by habit**, so the size prop should
-  refuse it rather than rely on discipline. This is a real difference from the
-  old line icons, which were fine at any size.
-
----
-
-## Marble texture — the rules it needs
-
-`explorations/marble-texture` implements the veining with an SVG `feTurbulence`
-filter: anisotropic `baseFrequency` (≈0.006 horizontal against 0.021 vertical)
-stretches the turbulence into directional veins, `feColorMatrix` maps the red
-channel to alpha with a threshold, and `feFlood` + `feComposite operator="in"`
-colours them. Eight filter variants exist, one per direction per theme.
-
-Two caveats, both flagged before anything is built on it:
-
-- **⚠️ Texture never goes behind data.** Veining behind a dense numeric table
-  makes contrast vary **per glyph**, which is not something WCAG can measure and
-  therefore not something an audit will catch. It needs a rule, not a check:
-  texture on `surface` and chrome only, **never** behind `surface-raised` where
-  the numbers live. The card shows an ALLOWED and a BANNED example.
-- **`feTurbulence` is CPU-rasterised**, costly over large areas, and
-  **re-rasterises on resize**. Mitigation is a fixed-size element or baking it to
-  a static asset at build time. Do not paint it across a full-page background and
-  expect it to be free.
-
----
-
-## What the previous handoff left open, now closed
-
-The 2026-07-27 handoff ended:
-
-> The one still-unguarded thing: **nothing compares the six slices visually.**
-> They share a token system that has been walked route by route but never seen
-> side by side.
-
-That is what the inventory cards are. And the observation held up — putting the
-slices side by side is exactly what surfaced the brown-gold problem, which
-walking routes one at a time never did, because `#b47c17` looks fine until it is
-next to something that is actually gold.
-
-It also fits the pattern the parallel-agent experiment kept producing: **the
-thing that catches a defect reads a different source than the code it guards.**
-A rendered side-by-side comparison is another such source.
+So the tradeables-only warning still stands for **drop tables and clue rewards**,
+where ids arrive from data that is not the price mapping. It does not really
+apply inside economy, which is fed by the same mapping the packer reads.
 
 ---
 
 ## Next steps
 
-### The decision — settled
+### 1. Page-level layout and navigation — start here
 
-Both questions are answered ([ADR-0020](./docs/adr/0020-nero-marquina-visual-direction.md)):
-**B · Nero Marquina**, and **light mode is first-class**. Light being first-class
-roughly doubles the surface — texture, sprite slots and contrast all get checked
-twice — and it was chosen anyway because there is no auth, so no theme preference
-can be remembered server-side and every visitor lands on whatever their OS says.
-Dark stays the _default_ (user choice → OS → dark, per ADR-0008); first-class
-means light is designed, not preferred.
+The last ADR-0020 step, and now the only one. Deferred across four handoffs,
+which is itself a signal: it is the largest and least reversible piece left in
+the redesign, and it gets skipped because every session finds something smaller
+that is genuinely useful. There is nothing smaller left in the redesign.
 
-### The build, in this order
+What already exists, so the directory does not need reinventing:
 
-Sequenced by blast radius — earlier steps are cheaper to reject:
+- **`TOOL_GROUPS` in `lib/navigation/tools.ts` is the nav's data model.** It
+  carries a heading, an href and an item id per group, and its test fails on
+  both a dead link and an unadvertised route.
+- **`app/layout.tsx` is nearly bare** — the `SpriteSheet` that used to sit in it
+  is gone. Clean place for a header. Note it provides **no `<main>`**; every
+  page renders its own, so a header must not assume one.
+- **`Icon` is tier two and tints with `currentColor`** — that is the one to use
+  for chrome (menu, close, chevron). `ItemIcon` is fixed-palette art and must
+  never sit beside a glyph at the same size (ADR-0020).
+- **`ThemeToggle` currently lives on the landing page** and is the app's only
+  client component. A global header is where it belongs; moving it is part of
+  this task, not a follow-up.
 
-- **Re-point Layer 1 in `globals.css`.** Layer 2 semantic names do not change, so
-  no component changes. This alone re-skins all 27 routes and is the checkpoint
-  worth stopping at to look around.
-- **Apply the gold fix** — `#c9a227` with near-black `primary-content` in light
-  mode. Independent of direction; do it regardless.
-- **Add the sprite sheet.** One `<defs>` in the root layout, `<use href>` at the
-  call sites — seven sprites inlined into 27 routes is dead weight. Sprites need
-  a `<title>`, not `aria-hidden`, unless the visible label already says the same
-  word.
-- **Then page-level layout and navigation.** Largest and least reversible; it
-  should follow a token system that has already been seen working.
+Two things to get right: the mobile breakpoint (the tables already scroll inside
+their own containers, so the header must not reintroduce page-level horizontal
+scroll — 390px is the check), and keeping `"use client"` on the smallest leaf, so
+a nav with a mobile toggle does not drag the whole layout into the bundle.
 
-### Phase B's own menu — unchanged, still unblocked
+### 2. Marble texture
 
-Dependabot PRs **#11 and #12** were the top item last session and have since
-landed (`bd5430f` bumps `actions/setup-node` to 7.0.0). **#13 is in**, and
-**#18 and #19 are reverts** — the ESLint 10 bump broke lint on `main`, and
-TypeScript is deliberately held at 5.x until the tooling supports 7. Treat major
-bumps here as real upgrades, not rubber stamps; two of the last five needed
-backing out.
+Needs the layout first. Never behind data.
 
-- **Roster page.** Still the highest-value thing not yet built: `sortByRank` /
+### Then — Phase B's menu, unchanged and still unblocked
+
+- **Roster page.** Still the highest-value thing not built: `sortByRank` /
   `groupByRank` over the WOM group, surfacing `player.updatedAt` so staleness is
-  visible rather than implied. One request, no fan-out.
-- **`pruneRateLimitCounters()` job**, behind `CRON_SECRET`. Nothing breaks
-  without it; the table just grows.
-- **De-duplicate the numeric field** across combat / skilling / quests. Touches
-  five slices, so it is deliberate work, not a drive-by. **Worth doing before the
-  redesign, not after** — three near-identical fields means restyling the input
-  three times and getting it subtly wrong twice.
-- **Drop-table feature**, now that V9b is answerable.
-- **Deployment.** Nothing is deployed, and the migration is applied to the local
-  database only. Whatever host is chosen starts from an unmigrated database.
-  Blocked on **V13** more than on code.
-- **Branch protection.** The `ci` gate job exists so this is one setting, but
-  nothing is protected yet: CI reports and does not block. Require `ci` on `main`.
+  visible rather than implied. `wom-group.ts` and `ranks.ts` are tested and have
+  no caller.
+- **`pruneRateLimitCounters()` job**, behind `CRON_SECRET`.
+- **Drop-table feature**, now that V9b is answerable — and the place where the
+  tradeables-only icon gap actually bites, unlike economy.
+- **Deployment.** Blocked on **V13** more than on code. The migration is applied
+  locally only, so `enforceRateLimit()` fails open anywhere else — safe, but not
+  rate limiting.
+- **~~Branch protection~~ — still blocked, still one option short, and now with
+  a live example.** The API returns **403, "Upgrade to GitHub Pro or make this
+  repository public"**. "Make it public" is off the table as of ADR-0022 (4,645
+  Jagex icons are in git history). So: **pay for Pro, or accept that CI reports
+  rather than blocks.** Undecided since 2026-07-31.
+
+  PR #25 is what that costs in practice: four green jobs, and nothing at all
+  preventing a merge had they been red. The decision is two minutes of thought
+  and keeps being deferred because the failure it prevents has not happened yet.
 
 ---
 
@@ -290,51 +175,57 @@ Unchanged. **Resolved: V1, V3, V9, V9b, V11, V14.** Moot: V11a, V4.
 | V2  | TempleOSRS terms unread (403)            | Collection log    |
 | V13 | Free-tier cron limits + hosting cost     | ADR-0006          |
 
-**New, design-side, and not yet numbered:** if a direction is chosen and built,
-it needs an ADR — it changes a settled decision ([ADR-0008](./docs/adr/0008-tailwind-v4-css-first-theming.md)
-covers the _mechanism_, not the palette) and adds the two-tier icon system and
-the texture rule, neither of which is derivable from the code.
-
 ---
 
 ## Gotchas
 
 **New this session:**
 
-- **Pixel sprites are not glyphs.** They cannot be tinted, cannot carry state
-  through colour, need a lighter ground in dark mode, and only scale to integer
-  multiples. Reaching for `size={24}` out of habit will quietly soften them.
-- **`DesignSync finalize_plan` requires `deletes`**, even when empty. Omitting it
-  fails with `finalize_plan requires: deletes.` Pass `[]`.
-- **Swatch cards flatter every palette.** Judge a direction from an applied
-  fragment with real data in it, or you will pick the one that photographs best.
+- **`/economy/items/[id]` 404s for an id outside the price mapping.** It is not
+  an open lookup over every item id in the game. That is why a "no artwork"
+  fixture using Coins tested nothing.
+- **Exactly five mapping ids have no packed artwork**, and four of them are the
+  404-ing icon files. `28220` is the one to reach for when you need a real gap.
+- **`slotted` is a both-themes decision, never a dark-mode one.** ADR-0008 rules
+  out `dark:` in a component, so there is no way to slot in dark only. Decide it
+  once, look at both.
+- **A 36px icon makes table rows ~52px.** That was checked against the `.tabular`
+  columns and at 390px; it is fine, but any future change to `TableCell` padding
+  should be looked at rather than reasoned about.
 
 **Carried over, still true:**
 
-- **`drizzle-kit` does not read `.env.local`.** Nor does any plain Node process
-  — it is a Next.js convention. It presents as `url: undefined`, which reads like
-  a broken config file.
-- **PowerShell 5.1's `Get-Content` defaults to ANSI, not UTF-8.** A
-  read-modify-write over a `.tsx` file containing em-dashes silently corrupts
-  every one of them. Typecheck, lint **and** Prettier all pass on the corrupted
-  files. **Use the editor, not shell text substitution, on source files.**
-- **PowerShell 5.1 mangles quotes passed to native commands.** `git commit -m`
-  with a here-string containing `"` splits into pathspecs. Use `git commit -F`.
+- **The icon manifest's order is the atlas index.** `ITEM_ICON_IDS[i]` occupies
+  cell `i`. Editing, sorting or filtering that array without `npm run icons:pack`
+  repoints every icon after the edit at the wrong item — and it renders as
+  _artwork_, not as an error.
+- **The icon set is GE-tradeables only.** No coins, no clue scrolls, no quest
+  capes, no diary rewards. Check `hasItemIcon()` before committing to an id in a
+  feature fed by anything other than the price mapping.
+- **`/mapping`'s `icon` field is authoritative; the item name is not** — 294 of
+  4,650 differ.
+- **`next/image` is wrong for pixel art**, and `next.config.ts` deliberately has
+  no `images.remotePatterns` — one turns `/_next/image?url=…` into an open proxy
+  on our origin. Don't add one back.
+- **`drizzle-kit` does not read `.env.local`** — presents as `url: undefined`.
+- **PowerShell 5.1's `Get-Content` defaults to ANSI**, silently corrupting
+  em-dashes in `.tsx` past typecheck, lint _and_ Prettier. **Use the editor, not
+  shell text substitution, on source files.** Its quote mangling also breaks
+  `git commit -m`; write the message to a file and use `git commit -F`.
+- **`.prettierignore` hides `.claude/worktrees/`**, so a root-run Prettier check
+  against a worktree path silently checks _nothing_ and prints success.
+- **Item art cannot be tinted, ever** — state lives on the container. Glyphs
+  (`Icon`) are `currentColor` and can. Never put one beside the other at the
+  same size.
+- **ADRs are point-in-time.** ADR-0008 still names `--osrs-slate-900`; ADR-0020
+  still describes a `Sprite` component that no longer exists.
 - **The dev server must be stopped before `next build`** — both use `.next/`.
-- **`force-dynamic` is not a caching-neutral flag.** It disables the fetch data
-  cache. Use `fetchCache = 'default-cache'` + `connection()`. Lint enforces this
-  in pages; route handlers are exempt, and correctly so.
-- **`cn()` joins classes, it does not merge them.** Passing a `max-w-*` through
-  `className` ships both, and **CSS source order decides**. Prefer a named prop.
-  **This will bite during the redesign** — it is the exact shape of mistake a
-  restyling pass invites.
-- **`getEnv()` validates the entire schema on first call** — one missing variable
-  breaks every route, not the related ones.
+- **`force-dynamic` is not a caching-neutral flag.** Use
+  `fetchCache = 'default-cache'` + `connection()`.
+- **`cn()` joins classes, it does not merge them.** CSS source order decides.
+- **`getEnv()` validates the entire schema on first call.**
 - **`app/layout.tsx` provides no `<main>`** — every page renders its own.
-  `page-conventions.test.ts` enforces it. Relevant if navigation gets restructured.
-- **ESLint flat config: same-named rules replace, they do not merge.** Test a new
-  lint rule by writing code that should fail it.
-- **`URL.hostname` keeps the brackets on IPv6** — `[::1]`, not `::1`.
+- **ESLint flat config: same-named rules replace, they do not merge.**
 - **Never concatenate a Bucket query.** A bad query returns **HTTP 200** with an
   `error` field.
 - **`roleOrders` indices are sparse**; **`gained` returns fewer rows than
@@ -343,14 +234,24 @@ the texture rule, neither of which is derivable from the code.
 
 ---
 
-## State of the repo
+## The thing this session confirmed
 
-Unchanged from 2026-07-27 evening, because this session changed no code:
+The recent handoffs have circled one lesson — a measurement beats an assumption,
+a rendered page beats a passing test. This session added the failure mode that
+sits underneath all of them: **a test can pin a state the app cannot reach.**
 
-- **27 routes, 1065 tests**, all six slices on `origin/main`, CI green.
-- The rate-limit migration is applied to **local Postgres only**;
-  `enforceRateLimit()` is verified end-to-end (20 pass, the 21st gets a 429).
-- `daily_snapshots` still has no writer. `rate_limit_counters` still has no
-  pruning job.
-- No clan/roster feature exists; `wom-group.ts` and `ranks.ts` are tested but
-  have no caller.
+The first version of the "item with no artwork" test used Coins, id 995. It
+passed. It was also describing something that cannot happen, because
+`/economy/items/995` is a 404 — the route only serves ids from the price
+mapping. Nothing was wrong with the assertion; the fixture was wrong about the
+world. Had it stayed, the codebase would have carried a green test claiming
+coverage of a path that does not exist, while the five ids that _do_ hit that
+path went unexercised.
+
+The tell was cheap and worth reusing: the fixture was invented rather than
+found. Coins were picked because they are a memorable untradeable, not because
+anything demonstrated the app could reach them. Five minutes checking the live
+mapping against the committed manifest produced the real list — five ids, four
+of them the documented 404 case — and the test now uses one of those. **An edge
+case worth a test is one the app can actually reach; if you cannot name the URL
+that gets there, the fixture is a guess wearing a test's clothes.**

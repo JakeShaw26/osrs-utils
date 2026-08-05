@@ -8,6 +8,7 @@ import {
   TableHeaderCell,
   TableRow,
 } from '@/components/atoms/Table';
+import { ItemIcon } from '@/components/atoms/ItemIcon';
 import { StatBadge } from '@/components/atoms/StatBadge';
 import type { AlchCandidate, AlchOpportunity } from '@/lib/economy/alch';
 import { formatGp } from '@/lib/utils/format-gp';
@@ -55,12 +56,17 @@ export function AlchProfitTable({ opportunities, emptyMessage }: AlchProfitTable
           opportunities.map(({ item, result }) => (
             <TableRow key={item.id}>
               <TableCell>
-                <Link
-                  href={`/economy/items/${item.id}`}
-                  className="font-medium text-content hover:text-primary hover:underline"
-                >
-                  {item.name}
-                </Link>
+                <span className="flex items-center gap-2.5">
+                  {/* Decorative — the link beside it prints the same name.
+                      `slotted` for the same reason as ItemPriceTable. */}
+                  <ItemIcon id={item.id} slotted />
+                  <Link
+                    href={`/economy/items/${item.id}`}
+                    className="font-medium text-content hover:text-primary hover:underline"
+                  >
+                    {item.name}
+                  </Link>
+                </span>
               </TableCell>
               <TableCell numeric>
                 {item.buyPrice === null ? '—' : formatGp(item.buyPrice)}

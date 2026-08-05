@@ -1,4 +1,5 @@
 import { StatTile } from '@/components/atoms/economy/StatTile';
+import { ItemIcon } from '@/components/atoms/ItemIcon';
 import { StatBadge } from '@/components/atoms/StatBadge';
 import { LiquidityWarning } from '@/components/molecules/economy/LiquidityWarning';
 import { calculateAlchProfit } from '@/lib/economy/alch';
@@ -59,13 +60,20 @@ export function ItemOverview({ row, natureRunePrice }: ItemOverviewProps) {
 
   return (
     <div className="space-y-6">
-      <div>
-        <div className="flex flex-wrap items-center gap-2">
-          <h2 className="text-xl font-semibold text-content">{row.name}</h2>
-          {row.members ? <StatBadge tone="members" value="Members" /> : null}
-          {flip?.taxExempt ? <StatBadge tone="info" value="Tax exempt" /> : null}
+      <div className="flex items-start gap-4">
+        {/* Decorative: the heading beside it is the item name. Slotted at
+            double scale, so the five mapping ids with no packed artwork (their
+            icon file 404s — `Crystal 2h axe` is one) read as an empty inventory
+            slot rather than as a gap where something failed. */}
+        <ItemIcon id={row.id} scale={2} slotted />
+        <div>
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="text-xl font-semibold text-content">{row.name}</h2>
+            {row.members ? <StatBadge tone="members" value="Members" /> : null}
+            {flip?.taxExempt ? <StatBadge tone="info" value="Tax exempt" /> : null}
+          </div>
+          <p className="mt-1 text-sm text-content-muted">{row.examine}</p>
         </div>
-        <p className="mt-1 text-sm text-content-muted">{row.examine}</p>
       </div>
 
       <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
